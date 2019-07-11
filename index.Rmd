@@ -1,6 +1,6 @@
 --- 
-title: "A Minimal Book Example"
-author: "Yihui Xie"
+title: "R語言課程"
+author: "林頌堅"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 output: bookdown::gitbook
@@ -9,12 +9,24 @@ bibliography: [book.bib, packages.bib]
 biblio-style: apalike
 link-citations: yes
 github-repo: rstudio/bookdown-demo
-description: "This is a minimal example of using the bookdown package to write a book. The output format for this example is bookdown::gitbook."
+description: "本課程介紹R語言的基本語法以及一些簡單的應用。"
 ---
 
-# Prerequisites
+# 前言 {-}
 
-This is a _sample_ book written in **Markdown**. You can use anything that Pandoc's Markdown supports, e.g., a math equation $a^2 + b^2 = c^2$.
+本課程介紹R語言的基本語法以及一些簡單的應用，內容如下：
+
+1. R語言的基本概念與語法
+2. 運用R語言進行資料處理
+3. Tidyverse簡介
+4. 資料視覺化
+5. 網路資料抓取 (I)
+6. 網路資料抓取 (II)
+7. 中文斷詞處理
+8. 中文未知詞處理
+9. 詞語的共現
+10. 文件叢集
+11. 主題模型
 
 The **bookdown** package can be installed from CRAN or Github:
 
