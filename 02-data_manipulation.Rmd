@@ -1,0 +1,281 @@
+# 運用R語言進行資料處理 {#data_manipulation}
+
+## 課程簡介 {-}
+
+### 課程簡介 {-}
+
+本次課程的目的為運用上單元學習到的若干概念，進行資料探索與處理，包括以下的內容：
+
+- 讀入資料，儲存為data frame資料形態
+- 瀏覽與檢視資料內容
+- 整理資料成適合分析的形式
+- 進行簡單分析
+
+本次課程將以環境資源資料開放平臺上的空氣品質指標為例，進行上述的資料探索與處理。
+
+### 學習目標 {-}
+
+- 能夠在R語言中讀入csv格式的資料檔案
+- 能夠利用R語言進行簡單的探索性分析
+- 能夠將分析過程的程式寫入檔案，便於日後使用在同樣或類似的工作上
+
+## 預備工作
+
+### 設定工作目錄
+
+在運用R語言時，首要工作是設定工作目錄。
+
+1. 首先利用Windows的檔案總管，在"我的文件下"建立新的工作目錄
+2. 在**Source**中增加新的Script
+3. 在Script上設定這個任務的工作目錄
+
+```{r eval=FALSE}
+setwd("rCourse02")
+```
+
+4. 執行可點選**Source**右上方的**Run**
+5. 可以在**Console**上，輸入`getwd()`檢查設定工作目錄是否成功
+
+```{r}
+getwd()
+```
+
+**注意**：為什麼`setwd("rCourse/02")`寫在Source上，而`getwd()`卻寫在Console？Source與Console上寫入的指令是否不同？
+
+## 讀入檔案資料
+
+### 讀入空氣品質指標資料
+
+1. 進入[環境資源資料開放平臺](https://opendata.epa.gov.tw/)
+2. 查詢空氣品質指標
+3. 點選[空氣品質指標(AQI)](https://opendata.epa.gov.tw/Data/Contents/AQI/)
+
+環境資源資料開放平臺提供三種資料科學最常見的資料格式
+
+- CSV
+- XML
+- JSON
+
+**CSV**是Comma Separated Values的縮寫。它是一種利用逗點(,)分隔每個Variable的資料檔案格式。在CSV檔案裡，除了第一列為資料名稱之外，其他列為Observation。
+
+**XML**是eXtensible Markup Language
+的縮寫。XML將資料表示成xml元素的集合，例如<DATA><AQI>32</AQI><CO>0.26</CO></DATA>。在CSV檔案裡，每一個元素由**標籤(tag)**構成，例如<AQI>32</AQI>，前面的標籤稱為開始標籤，後面的則稱為結束標籤，以前面的例子來說，開始標籤是<AQI>，結束標籤則是</AQI>。標籤裡是資料名稱，開始標籤與結束標籤之間便是資料值。
+
+**JSON**代表JavaScript Object Notation，也就是以JavaScript物件(object)的方式表示資料的檔案格式，例如：{"AQI":"32", "CO":"0.26"}。其中的AQI為資料名稱，32為資料值。
+
+在本次課程中，先以CSV格式讀取空氣品質指標檔案，未來可利用R語言的套件直接讀取XML和JSON格式資料。
+
+在R中讀入csv資料，
+
+1. 在**Script**上輸入下面的敘述
+
+```{r}
+# 讀入空氣品質指標資料CSV檔案
+df <- read.csv(file="http://opendata.epa.gov.tw/webapi/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=csv", 
+               fileEncoding="UTF-8-BOM",
+               stringsAsFactors=FALSE)
+```
+
+`read.csv()`上包含以下的參數：
+
+- `file`參數為檔案名稱
+- `fileEncoding`參數是檔案的文字編碼方式。因為AQI資料的檔案文字編碼格式為UTF-8 with BOM，所以`read.csv()`的fileEncoding參數設為"UTF-8-BOM"
+- `stringsAsFactors`參數讀入的文字資料是否存成factor。希望讀入的不要存成factor，而是以character的形式存在，所以將stringsAsFactors參數設為FALSE。
+    
+2. 點選敘述，然後將滑鼠指標移到**Source**右上的**Run**，點擊執行
+
+3. 查看**Environment**可發現新增一個名稱為df的data frame。這是由讀入的資料形成行與列為基礎的資料結構：data frame。
+注意有多少個observations (列)和多少個variables (行)。
+
+### 瀏覽讀入的資料
+
+大抵來說，在拿到資料後，往往不會馬上知道如何使用，所以會先對資料進行探索，先看看資料形式。
+
+- 有哪些資料？
+- 包含哪些欄位？
+- 資料的數量？
+- 資料的型態？
+- 資料的分布？
+
+首先檢視讀入的資料。data frame的資料檢視可以直接點選Environment上的df或在Console輸入
+
+```{r eval=FALSE}
+View(df)
+```
+
+若是資料數量太多，可以先檢視頭尾幾筆資料。
+
+- `head(x, n)`：檢視data frame x的前n筆資料，`n`預設為6
+- `tail(x, n)`：檢視data frame x的後n筆資料，`n`預設為6
+
+```{r eval=FALSE}
+head(df)
+tail(df)
+```
+
+接著查看data frame 的資料數量，有多少列(多少個Observations)？多少行(多少個Variables)？
+
+- nrow(x)：x上有多少列 (Observations)？
+- ncol(x)：x上有多少行 (Variable)？
+- dim(x)：x上有多少列、行？
+
+```{r eval=FALSE}
+nrow(df)
+ncol(df)
+dim(df)
+```
+
+然後，再利用`str()`查看data frame上各欄位的資料型態
+
+```{r eval=FALSE}
+str(df)
+```
+
+目前df上各行的資料型態可以看到有int(integer)、num(numeric)和chr(character)
+
+最後，利用`summary(x)`檢視上各行(欄位)的資料分布情形
+
+- 若是Variable的資料型態為integer或numeric，會呈現最小值、第一四分位數、中位數、平均數、第三四分位數、最大值等
+- 若是Variable的資料型態為character，只會呈現它的型態
+- 資料中是否有NA(non-available)？
+
+**注意**：原本檔案中如果有遺漏的資料時，讀入資料後會以NA方式呈現，檢查資料摘要時需要特別留意。
+
+```{r eval=FALSE}
+summary(df)
+```
+
+## 資料整理
+
+### 去除AQI為NA的資料紀錄
+
+先利用`is.na()`查看AQI為NA的資料紀錄。is.na(x)：如果x是NA的話，結果為TRUE，否則為FALSE。
+
+```{r eval=FALSE}
+df[is.na(df$AQI), ]
+```
+
+去除AQI為NA的資料紀錄
+```{r}
+df <- df[!is.na(df$AQI), ]
+```
+
+**練習**
+
+請在Console上再次查看df的資料數量、資料型態、資料摘要，看看與先前執行有何不同
+
+### Variable資料型態變更
+
+將某些character型態的欄位資料改為factor
+
+```{r}
+df$County <- factor(df$County)
+```
+
+**練習**
+
+在執行上面的敘述後，在Console再次查看資料型態與資料摘要，注意County欄位的結果。原本County的資料型態是character，現在改為factor之後，會呈現各種值(各縣市)的出現次數。
+
+某些character型態的欄位資料則修改為有順序的factor，例如狀態(Status)。首先查看狀態(Status)上有哪些值
+
+```{r eval=FALSE}
+unique(df$Status)
+```
+
+狀態的值，可以依據AQI值的大小排序，"良好" < "普通" < "對敏感族群不健康" < "對所有族群不健康" < "危害"(參考[環保署空氣品質監測網](https://taqm.epa.gov.tw/taqm/tw/b0201.aspx)對空氣品質指標的定義)，另外還有"設備維護"。
+
+* 在Script上輸入，並執行
+```{r}
+df$Status <- factor(df$Status, levels=c("設備維護", "良好", "普通", "對敏感族群不健康", "對所有族群不健康", "危害"), ordered=TRUE)
+```
+
+**練習**
+
+在執行上面的敘述後，在Console再次查看資料型態與資料摘要，注意Status欄位的結果。
+
+## 資料分析
+
+利用環保署的AQI資料，回答以下幾個問題：
+
+1. 針對某一縣市，找出它有哪幾個偵測站？
+    - 關鍵點：選擇偵測站所在縣市
+    
+2. 找出空氣品質最糟糕的偵測站？
+    - 關鍵點：空氣品質指數最高的紀錄是第幾筆
+    
+3. 找出汙染物是細懸浮微粒的偵測站數量？
+    - 關鍵點：選擇汙染物是細懸浮微粒的偵測站，然後計算它的數量
+    
+4. 計算各種空氣品質狀態的偵測站數量？
+    - 關鍵點：對各種空氣品質狀態統計
+
+### 找出某一縣市的偵測站
+
+df資料的County欄位是偵測站所在的縣市。以雲林縣為例，當偵測站所在縣市是雲林縣時，`df$County=="雲林縣"`為TRUE，否則為FALSE。所以利用`df$SiteName[df$County=="雲林縣"]`可以傳回在雲林縣的偵測站名稱。
+
+```{r eval=FALSE}
+df$SiteName[df$County=="雲林縣"]
+```
+
+**練習**
+
+新北市各偵測站的空氣品質指數分別是多少
+
+### 找出空氣品質最糟糕的偵測站
+
+空氣品質最糟糕也就是AQI最大，所以可以用`which.max(df$AQI)`找到空氣品質最糟糕的記錄。因此，`df$SiteName[which.max(df$AQI)]`便是空氣品質最糟糕的偵測站名稱。
+
+```{r eval=FALSE}
+df[which.max(df$AQI), c("SiteName", "AQI")]
+```
+
+**練習**
+
+空氣品質最糟糕的偵測站偵測到的PM10和PM2.5指數各是多少？
+
+### 找出汙染物是細懸浮微粒的偵測站數量
+
+利用`df$SiteName[df$Pollutant=="細懸浮微粒"]`找出汙染物是細懸浮微粒的偵測站名稱。然後利用`length()`計算偵測站名稱的數量。
+
+```{r eval=FALSE}
+length(df$SiteName[df$Pollutant=="細懸浮微粒"])
+```
+
+### 計算各種空氣品質狀態的偵測站數量
+
+`df$Status`列出各偵測站的狀態。`table(df$Status)`可以統計各種狀態的數量。
+
+```{r eval=FALSE}
+table(df$Status)
+```
+
+## 程式存檔
+
+為了便於日後修改與使用，可將Script 存檔。建議利用工具列File 下面的**Save with Encoding** 存檔，Choose Encoding選擇UTF-8，以UTF-8文字編碼格式存檔。
+
+未來有需要再開啟這個Script 的話，可以利用File 下的**Reopen with Encoding**，再選擇UTF-8，重新開啟。
+
+## 小結 {-}
+
+- 資料處理與分析的步驟
+    - 取得資料
+    - 初步觀看資料以方便載入
+    - 載入資料
+    - 瀏覽與檢視資料以便擬定問題
+    - 資料清理
+    - 資料分析
+    
+- 初學者常問程式的敘述在Script上或是在Console上寫？我的建議是如果未來還會使用或是敘述較長，可以在Script上編寫，便於日後執行與修改。如果如果是暫時性(一次性)而且敘述較短，在Console上寫，較為省事簡便。
+   
+- 本次課程主要運用R語言中vector、factor和data frame等的進階資料型態以及相關函數，進行資料探索與處理。幾種常用的函數可以加以留意
+    - `length()`
+    - `which.max()`
+    - `order()`
+    - `table()`
+
+- data frame中什麼時候用character？什麼時候用factor？通常在需要進行字串運算、文本處理等文字為主的運用時，我會使用character；在需要進行統計時，則用factor。
+
+## 延伸思考 {-}
+
+- 當收到一個新的資料檔案時，如何了解這些資料以便利用？
+- 在你的工作或研究中，有哪些資料可以拿來進行分析？
