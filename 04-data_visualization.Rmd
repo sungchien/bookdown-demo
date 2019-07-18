@@ -1,114 +1,10 @@
---- 
-title: "R語言課程講義"
-author: "林頌堅"
-date: "`r Sys.Date()`"
-site: bookdown::bookdown_site
-output: bookdown::gitbook
-documentclass: book
-bibliography: [book.bib, packages.bib]
-biblio-style: apalike
-link-citations: yes
-github-repo: rstudio/bookdown-demo
-description: "本課程介紹R語言的基本語法以及一些簡單的應用。"
----
-
-# 前言 {-}
-
-Placeholder
-
-
-
-<!--chapter:end:index.Rmd-->
-
-
-# R語言的基本概念與語法 {#intro}
-
-Placeholder
-
-
-## 課程簡介 {-}
-### 課程簡介 {-}
-### 學習目標
-## R語言的基本概念
-## R語言的運算
-## R語言的基本資料型態
-### 數值資料型態
-### 文字資料型態
-### 邏輯資料型態
-### factor資料型態
-## R語言的特殊資料型態
-### vector
-### matrix
-### list
-### data frame
-## 小結 {-}
-## 延伸思考 {-}
-
-<!--chapter:end:01-intro.Rmd-->
-
-
-# 運用R語言進行資料處理 {#data_manipulation}
-
-Placeholder
-
-
-## 課程簡介 {-}
-### 課程簡介 {-}
-### 學習目標 {-}
-## 預備工作
-### 設定工作目錄
-## 讀入檔案資料
-### 讀入空氣品質指標資料
-### 瀏覽讀入的資料
-## 資料整理
-### 去除AQI為NA的資料紀錄
-### Variable資料型態變更
-## 資料分析
-### 找出某一縣市的偵測站
-### 找出空氣品質最糟糕的偵測站
-### 找出汙染物是細懸浮微粒的偵測站數量
-### 計算各種空氣品質狀態的偵測站數量
-## 程式存檔
-## 小結 {-}
-## 延伸思考 {-}
-
-<!--chapter:end:02-data_manipulation.Rmd-->
-
-
-# Tidyverse簡介 {#tidyverse}
-
-Placeholder
-
-
-## 課程簡介 {-}
-### 課程簡介 {-}
-### 學習目標 {-}
-## tidy資料格式簡介
-### tidy資料格式的特徵
-### tidy資料格式的優點
-### wide format vs. long format
-## tidyverse套件
-## tidy data format的資料分析方法
-### 預備工作
-### 使用tidyverse套件的函數
-### 資料整理
-## 資料分析
-### 找出某一縣市的偵測站
-### 找出空氣品質最糟糕的偵測站
-### 找出汙染物是細懸浮微粒的偵測站數量
-### 計算各種空氣品質狀態的偵測站數量
-## 小結 {-}
-## 延伸思考 {-}
-
-<!--chapter:end:03-tidyverse.Rmd-->
-
 # 資料視覺化 {#data_visualization}
 
 ## 課程簡介 {-}
 
 ### 課程簡介 {-}
 
-本次課程的目的為介紹R語言上主要的資料視覺化工具-- ggplot2。本次課程將以空氣品質指標資料為例，進行資料視覺化。包括以下的內容：
+本次課程的目的為介紹R語言上主要的資料視覺化工具-- ggplot2。本次課程將以空氣品質指標資料為例，探討資料視覺化的過程。包括以下的內容：
 
 - 資訊視覺化簡介
 - R語言的資料視覺化工具: ggplot2
@@ -134,7 +30,7 @@ Placeholder
 
 其中的第4和第5步驟都可以進行資料視覺化。在第4步驟中，可以利用資料視覺化進行資料的探索分析，概觀資料的樣貌，擬定相關資料模型。第5步驟則是在對外說明時，利用圖形增強研究結果說明的印象和效用。
 
-[視覺化常見的應用問題](https://extremepresentation.com/design/7-charts/)可以分成以下四類：
+[視覺化常見的應用問題](https://extremepresentation.com/design/7-charts/)可以分成以下五類：
 
 - 分布(distribution)：某一數值資料的散佈情形
     - 觀察重點： 最大值、最小值、集中化、異常
@@ -143,7 +39,9 @@ Placeholder
 - 組成(compositon)：某一類別資料其對應數值的比例
     - 觀察重點： 比例大小
 - 關係(relationship)：某兩個數值資料之間的關係
-    - 觀察重點： 模式(直線、週期)、分布範圍
+    - 觀察重點： 模式(是否呈現直線)、分布範圍
+- 趨勢(trend)：某一數值資料對另一與時間有關的資料的關係
+    - 觀察重點： 成長或衰減、週期
     
 這些問題可以組合，例如比較類別的分布
 
@@ -152,89 +50,103 @@ Placeholder
 - 分布：以直方圖表示某一數值資料的散佈情形
 - 比較：以長條圖比較某一類別資料在其對應數值上的差異
 - 組成：以圓餅圖表示某一類別資料其對應數值的比例
-- 關係：以散佈圖或折線圖觀察某兩個數值資料之間的關係
-- 如果兩個數值資料中，有一個是時間資料，特別適合使用折線圖觀察
+- 關係：以散佈圖觀察某兩個數值資料之間的關係
+- 趨勢：折線圖觀察數值資料對時間資料的關係
 - 比較+分布：以盒狀圖或小提琴圖比較某一類別資料其對應數值的散佈情形
 
-綜合以上所說的，資料視覺化可以定義為：運用各種類型的圖表，以圖表上的位置、顏色、形狀、大小等視覺線索表現資料的分布、比較、組成和關係，以便進行資料的分析，發掘資料蘊藏的訊息，同時也提供做為溝通說明時的輔助工具。
+綜合以上所說的，資料視覺化可以定義為：運用各種類型的圖表，以圖表上的位置、顏色、形狀、大小等視覺線索表現資料的分布、比較、組成、關係和趨勢，以便進行資料的分析，發掘資料蘊藏的訊息，同時也提供做為溝通說明時的輔助工具。
 
-## R 語言的資料視覺化工具
+## R語言的資料視覺化工具
 
-| ggplot2
-* ggplot2提供一套標準圖表與資訊視覺化的語法和套件
-    + Data 資料來源
-    + Aesthetics 視覺線索：位置、顏色、形狀、大小
-    + Geometrics 圖表類型
-    + Scales 資料編碼的表現形式
-    + Coordinates 座標類型
-    + Facets 圖表層面
-    + Themes 圖表外觀
+ggplot2是R語言中常見的一個視覺化套件，提供一套標準圖表與資訊視覺化的語法和套件。
+
+### ggplot2的運作概念
+
+1. 找出資料中要分析的單元
+2. 將資料整理成data frame (或tibble)的格式，data frame上的每一個Observation，視為圖形上要呈現的單元
+3. 選擇data frame上需要對應到位置、顏色、形狀或大小等資料編碼方式的Variables
+4. 選擇圖表類型
+5. 設定各種資料編碼方式的表現樣式，例如座標的尺度、調色板等，
+6. 必要時調整圖形的座標類型、圖表層面和圖表外觀。
+
+以下將上面的各個步驟對應到 ggplot2中的幾種函數與語法
+
+- Data 資料來源
+- Aesthetics 資料編碼：位置、顏色、形狀、大小
+- Geometrics 圖表類型
+- Scales 資料編碼的表現形式
+- Coordinates 座標類型
+- Facets 圖表層面
+- Themes 圖表外觀
     
-## ggplot2的運作概念
-* 將做為資料來源的data frame上的每一筆紀錄，視為圖形上要呈現的一個圖形，
-* 先將紀錄上的欄位對應到位置、顏色、形狀或大小等資料編碼方式，
-* 然後選擇圖表類型，
-* 設定各種資料編碼方式的樣式，例如座標的尺度、調色板等，
-* 必要時調整圖形的座標類型、圖表層面和圖表外觀。
-    
-## 幾種常用的ggplot2資料編碼
-* x：x軸位置
-* y：y軸位置
-* color：點、線的顏色
-* fill：填入的顏色
-* size：大小
-* linetype：線的樣式
-* shape：點的樣式
+### Aesthetics上幾種常用的資料編碼方式
 
-## 幾種常用的ggplot2圖表類型
-* geom_histogram()：直方圖
-* geom_col()：長條圖
-* geom_line()：折線圖
-* geom_point(), geom_jitter(), geom_count()：散佈圖、點狀圖
-* geom_boxplot()：盒狀圖
-* geom_violin()：小提琴圖
-* geom_area()：區域圖
-* geom_tile()：方塊圖
+- `x`：x軸位置
+- `y`：y軸位置
+- `color`：點、線的顏色
+- `fill`：填入的顏色
+- `size`：大小
+- `linetype`：線的樣式
+- `shape`：點的樣式
+- `label`：文字標示
 
-# 載入ggplot2套件與讀取資料
-## 準備工作目錄與檔案
-* 在rCourse下，建立工作目錄04
-* 將02的空氣品質指標資料檔案複製到04下
+### ggplot2上幾種常用的圖表類型 (Geometrics)
 
-## 設定工作目錄
-* 首先開啟新的Script
-* 在Script上，設定工作目錄
-```{r}
+- `geom_histogram()`：直方圖
+- `geom_col()`：長條圖
+- `geom_line()`：折線圖
+- `geom_point()`, `geom_jitter()`, `geom_count()`：散佈圖、點狀圖
+- `geom_boxplot()`：盒狀圖
+- `geom_violin()`：小提琴圖
+- `geom_area()`：區域圖
+- `geom_tile()`：方塊圖
+- `geom_text()`：文字
+
+### 使用ggplot2套件
+ggplot2是tidyverse中包含的一個套件
+可以使用`library(tidyverse)`載入，或單獨使用`library(ggplot2)`載入。
+
+```{r  echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+## 以資料視覺化的方式進行資料探索
+
+以下利用空氣品質指標資料為例，說明以資料視覺化的方式進行資料探索的過程。
+
+### 預備工作
+
+1. 以檔案總管在「我的文件」下的「rCourse」目錄內新增工作目錄「04」
+2. 開啟新的**Script**
+3. 設定工作目錄
+
+```{r eval=FALSE}
 setwd("rCourse/04")
 ```
 
-## 使用ggplot2套件
-* ggplot2是tidyverse中包含的一個套件
-* 可以使用library(tidyverse)載入
-* 在Script上輸入
-```{r}
+4. 載入tidyverse套件
+```{r eval=FALSE}
 library(tidyverse)
 ```
-* 或單獨使用library(ggplot2)載入
-```{r}
-library(ggplot2)
-```
-* 建議採用library(tidyverse)，可以一次載入多個資料處理套件
 
-## 讀取粉絲專頁發文資料csv檔案
-* 在Script上輸入
+5. 讀取空氣品質指標資料的CSV檔案
+
 ```{r}
-aqi_data <- read.csv(file="AQI_20180128061645.csv",
-               fileEncoding="UTF-8-BOM", stringsAsFactors=FALSE)
+aqi_data <- read.csv(file="http://opendata.epa.gov.tw/webapi/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=csv", 
+               fileEncoding="UTF-8-BOM",
+               stringsAsFactors=FALSE)
 ```
 
-## 讀取縣市地區對照資料
-* 在Script上輸入
+6. 複製
+
+點選**Source**右上方的**Run**執行
+
 ```{r}
 ca <- read.csv(file="county_area.csv",
                fileEncoding="UTF-8", stringsAsFactors=FALSE)
 ```
 * 注意：county_area.csv與AQI_20180128061645.csv的編碼方式不同，前者是UTF-8 without BOM，後者則是 UTF-8 with BOM
+
 
 ## 將地區資料加入空氣品質指標資料
 ```{r}
@@ -683,18 +595,3 @@ aqi_data %>%
 4. scal_ --> 資料樣式
 5. labs  --> 標題
 6. theme --> 圖表外觀
-
-<!--chapter:end:04-data_visualization.Rmd-->
-
-# Final Words
-
-We have finished a nice book.
-
-<!--chapter:end:05-summary.Rmd-->
-
-`r if (knitr:::is_html_output()) '
-# References {-}
-'`
-
-<!--chapter:end:06-references.Rmd-->
-

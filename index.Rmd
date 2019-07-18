@@ -1,5 +1,5 @@
 --- 
-title: "R語言課程"
+title: "R語言課程講義"
 author: "林頌堅"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
@@ -26,7 +26,7 @@ description: "本課程介紹R語言的基本語法以及一些簡單的應用�
 
 第二部分
 
-4. 資料視覺化
+4. [資料視覺化]
 
 5. 利用R語言進行探索性資料分析
 

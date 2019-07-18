@@ -4,49 +4,49 @@
 
 ### 課程簡介 {-}
 
-本次課程為介紹近來利用R 語言進行資料分析時常見的tidy data format與tidyverse套件
+本次課程為介紹近來利用R語言進行資料分析時常見的tidy資料格式與tidyverse套件
 
-- 本課程將首先介紹tidy data format
-- 然後介紹tidyverse套件中的主要函數
+- 本課程將首先介紹tidy資料格式
+- 然後介紹處理tidy資料格式的tidyverse套件之中的主要函數
 - 最後以上次的空氣品質指標資料為例，說明一些常用的資料分析方法
 
 ### 學習目標 {-}
 
 - 能夠安裝套件，並且在需要時載入。
-- 能夠說明使用tidy data format 的優點，並將輸入資料表示成tidy data format。
-- 能夠運用tidyverse 套件中常用的指令進行資料分析
+- 能夠說明使用tidy資料格式的優點，並將輸入資料表示成tidy資料格式。
+- 能夠運用tidyverse套件中常用的指令進行資料分析
 
-## tidy data format簡介
+## tidy資料格式簡介
 
 在[運用R語言進行資料處理]，我們已經知道在R語言的資料探索與分析中，data frame是相當重要的角色。但仍有許多處理，無法在data frame上完成，需要利用vector及list等資料型態。
 
-為此緣故，近來R語言的資料科學家發展出一套方式，可以在data frame上完成絕大多數的資料探索與分析。這種方式稱為tidy data format。
+為此緣故，近來R語言的資料科學家發展出一套方式，可以在data frame上完成絕大多數的資料探索與分析。這種方式稱為tidy資料格式。
 
-### tidy data format的特徵
+### tidy資料格式的特徵
 
-一個資料被稱為具有 tidy data format的話，必須滿足以下三個條件：
+一個資料被稱為具有 tidy資料格式的話，必須滿足以下三個條件：
 
 1. 每一個Variable為資料上的一行。
 2. 每一個Observation為資料上的一列。
 3. 每一個值在資料上為一格 (cell)。
 
-### tidy data format的優點
+### tidy資料格式的優點
 
-tidy data format具有以下的優點：
+在進行資料處理與分析時，使用tidy資料格式具有以下的優點：
 
 - 較容易進行處理
 - 較容易進行視覺化 
 - 較容易應用資料模型
 
-### wide data format vs. long data format
-tidy data format的資料依據其上的欄位數目多寡分為：
+### wide format vs. long format
+tidy資料格式的資料依據其上的欄位數目多寡分為：
 
-- wide data format
-- long data format
+- wide format
+- long format
 
-以下視同一個資料分別以wide data format和long data format的形式呈現。
+以下視同一個資料分別以wide format和long format的形式呈現。
 
-**wide data format**
+**wide format**
 
 ```{r echo=FALSE, eval=TRUE}
 avg.temp <- data.frame(
@@ -58,257 +58,306 @@ avg.temp <- data.frame(
 avg.temp
 ```
 
-**long data format**
+**long format**
+
+```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+```
 
 ```{r echo=FALSE, eval=TRUE}
 gather(avg.temp, city, temp, -year)
 ```
-在long data format上，每一行上只有一個觀測結果
+在long format上，每一行上只有一個觀測結果。在上面的例子中，觀測結果是每一年各城市的平均氣溫(temp)。
 
-R語言中使用tidy data format時，盡量以long data format為主。若是原本的資料為wide format，可以轉變成為long format。
+R語言中使用tidy資料格式時，盡量以long format為主。若是原本的資料為wide format，可以轉變成為long format。
 
-## tidy data format使用的資料型態：tibble
-* tibble 類似data frame
-* 在tidy data format中，data frame自動轉換為tibble
+tidy資料格式使用的資料型態是類似於data frame的**tibble**，tibble上同樣以一列為一個Observation，一行為一個Variable。在tidy data format中，data frame會自動轉換為tibble。
 
-## package: tidyverse
-* 目前在R語言已經有許多套件可以支援tidy data format
-* 所以有人將比較常用的套件集合起來，成為一個套件tidyverse
-* 如果第一次使用tidyverse套件，需要在Console上先安裝該套件
-* 在Console上輸入
+## tidyverse套件
+
+**套件(packages)**是一群預先寫好的程式，開發者可以運用自己或其他人寫好的套件撰寫程式，避免重複撰寫以及減少錯誤。
+
+目前在R語言已經有許多支援tidy資料格式的套件。所以有人將比較常用的套件集合起來，成為一個套件**tidyverse**。如果第一次使用tidyverse套件，需要在Console上先安裝該套件。
+
 ```{r eval=FALSE}
 install.packages("tidyverse")
 ```
-* 完成安裝後，載入套件
-* 以後每次開啟RStudio，便需要重新載入
-```{r echo=FALSE}
+
+完成安裝後，載入套件，每次開啟RStudio，如果使用到這個套件，也需要重新載入。
+
+```{r eval=FALSE}
 library(tidyverse)
 ```
 
-# tidy data format的資料分析方法
+以下介紹幾個tidyy資料格式常用的函數
 
-## 利用空氣品質指標資料為例進行資料分析
-* 以檔案總管在「我的文件」下的「rCourse」目錄內新增工作目錄「03」
-* 開啟新的Script
-* 設定工作目錄
-```{r}
+- 選取tibble中的幾個Variables： `select()`
+- 依照位置選取tibble中的Observations： `slice()`
+- 根據條件選取tibble中的Observations： `filter()`
+- 增加或修改tibble的Variables： `mutate()`
+- 依照某個Variable的資料數值大小，排列Observations： `arrange()`
+- 依照某個Variable的資料數值大小，選出前幾筆Observations： `top_n()`
+- 依照某個Variable的資料數值，將Observations分群： `group_by()`
+- 對Observatiosn進行彙整(加總、平均、...)： `summarise()`
+
+另外，當較複雜的運算，無法只用單一函數完成時，tidyverse 提供了一個方法可組合多個函數，稱為**pipe**。pipe會將函數的運算結果導入下一個函數，做為下一個函數的第一個參數。
+
+pipe在R語言中寫成`%>%`，例如將df的Observations依據Var1的數值大小排序後，選出前10筆Observations，可寫成`arrange(df, Var1) %>% slice(1:5)`。
+
+## tidy data format的資料分析方法
+
+以下利用空氣品質指標資料為例，說明利用tidy資料格式和tidyverse套件進行資料分析的過程。
+
+### 預備工作
+
+1. 以檔案總管在「我的文件」下的「rCourse」目錄內新增工作目錄「03」
+2. 開啟新的**Script**
+3. 設定工作目錄
+
+```{r eval=FALSE}
 setwd("rCourse/03")
 ```
 
-* 載入tidyverse套件
-```{r}
+4. 載入tidyverse套件
+```{r eval=FALSE}
 library(tidyverse)
 ```
 
-## 讀取空氣品質指標資料
-* 將上次課程的空氣品質指標資料複製到新工作目錄中
-* 讀取空氣品質指標資料的CSV檔案
-* 在Script上輸入
+5. 讀取空氣品質指標資料的CSV檔案
+
 ```{r}
-df <- read.csv(file="AQI_20180128061645.csv", 
+df <- read.csv(file="http://opendata.epa.gov.tw/webapi/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=csv", 
                fileEncoding="UTF-8-BOM",
                stringsAsFactors=FALSE)
 ```
-* 執行後，可先在Console或Environment上查看df
 
-## 幾個常用的tidy方法
-* 選取tibble中的幾個欄位： select()
-* 依照紀錄位置選取tibble中的紀錄： slice()
-* 根據條件選取tibble中的紀錄： filter()
-* 增加或修改tibble的欄位： mutate()
+6. 點選**Source**右上方的**Run**執行
+7. 查看df
 
-## 幾個常用的tidy方法
-* 依照某個欄位的資料數值排列紀錄： arrange()
-* 依照某個欄位的資料數值選出前幾筆： top_n()
-* 依照某個欄位的資料數值將紀錄分群： group_by()
-* 對紀錄進行彙整(加總、平均、...)：summarise()
+### 使用tidyverse套件的函數
 
-## 範例練習
-* 回答以下幾個問題
-    + 選取空氣品質指標資料中的縣市、偵測站與空氣品質指標
-    + 選取空氣品質指標資料中前五筆及後五筆
-    + 選取空氣品質指標資料中AQI值大於或等於120的紀錄
-    + 按照AQI的值，由大到小排序空氣品質指標資料
-    + 選取空氣品質指標資料中AQI值最大的五筆紀錄
-    + 計算各縣市的偵測站數目
+載入空氣品質指料的資料後，嘗試利用tidy的方法回答以下幾個問題
 
-## 選取空氣品質指標資料中的縣市、偵測站與空氣品質指標
-* 先前的做法
-```{r}
+- 選取空氣品質指標資料中的縣市、偵測站與空氣品質指標
+- 選取空氣品質指標資料中前五筆及後五筆
+- 選取空氣品質指標資料中AQI值大於或等於120的紀錄
+- 按照AQI的值，由大到小排序空氣品質指標資料
+- 選取空氣品質指標資料中AQI值最大的五筆紀錄
+- 計算各縣市的偵測站數目
+
+1. 選取空氣品質指標資料中的縣市、偵測站與空氣品質指標
+
+**提示**：這個問題是從資料中選取若干個Variables，也就選取縣市(County)、偵測站名稱(SiteName)與空氣品質指標(AQI)等三個Variables。
+
+- 先前的做法，利用Variable的名稱
+```{r eval=FALSE}
 df[, c("County", "SiteName", "AQI")]
 ```
 
-## 選取空氣品質指標資料中的縣市、偵測站與空氣品質指標
-* 在tidy的做法
-```{r}
+- 在tidy的做法，選取資料中的Variables，可以利用`select()`
+```{r eval=FALSE}
 select(df, County, SiteName, AQI)
 ```
 
-## 選取空氣品質指標資料中前五筆及後五筆
-* 先前的做法
-```{r}
+2. 選取空氣品質指標資料中前五筆及後五筆
+
+**提示**：依照前五筆及後五筆等位置選取紀錄。後五筆為(nrow(df)-4):nrow(df)。
+
+- 先前的做法，利用Observation的位置
+```{r eval=FALSE}
 df[c(1:5, (nrow(df)-4):nrow(df)), ]
 ```
 
-## 選取空氣品質指標資料中前五筆及後五筆
-* 在tidy的做法
-```{r}
+- 在tidy的做法，依據位置選取Observations。可以利用`slice()`
+```{r eval=FALSE}
 slice(df, c(1:5, (nrow(df)-4):nrow(df)))
 ```
 
-## 選取空氣品質指標資料中AQI值大於或等於120的紀錄
-* 先前的做法
-```{r}
+3. 選取空氣品質指標資料中AQI值大於或等於120的紀錄
+
+**提示**：根據條件「AQI 值大於或等於120」選取紀錄
+
+- 先前的做法，依據條件索引篩選適合的Observations
+```{r eval=FALSE}
 df[df$AQI>=120, ]
 ```
 
-## 選取空氣品質指標資料中AQI值大於或等於120的紀錄
-* 在tidy的做法
-```{r}
+- 在tidy的做法，依據條件索引篩選適合的Observations，可以利用`filter()`
+```{r eval=FALSE}
 filter(df, AQI>=120)
 ```
 
-## 按照AQI的值，由大到小排序空氣品質指標資料
-* 先前的做法
-```{r}
+4. 按照AQI的值，排序空氣品質指標資料
+
+**提示**：依照AQI 欄位的數值排列紀錄
+
+**由小到大**
+
+- 先前的做法，利用`order()`產生按照資料大小的順序
+```{r eval=FALSE}
+df[order(df$AQI), ]
+```
+
+* 在tidy的做法，依據某一個Variable的大小排序，可以利用`arrange()`
+```{r eval=FALSE}
+arrange(df, AQI)
+```
+
+**由大到小**
+
+- 先前的做法，利用`order()`產生按照資料大小的順序，並且指定`decreasing=TRUE` 表示由大到小
+```{r eval=FALSE}
 df[order(df$AQI, decreasing=TRUE), ]
 ```
 
-## 按照AQI的值，由大到小排序空氣品質指標資料
-* 在tidy的做法
-```{r}
+* 在tidy的做法，利用`arrange()`時，如果需要由大到小排列的話，先利用`desc()`將Variable的大小反轉
+```{r eval=FALSE}
 arrange(df, desc(AQI))
 ```
 
-## 選取空氣品質指標資料中AQI值最大的五筆紀錄
-* 先前的做法
-```{r}
+5. 選取空氣品質指標資料中AQI值最大的五筆紀錄
+
+**提示**：依照AQI 欄位的數值由大到小排序，然後選出前五筆
+
+- 先前的做法，利用`order()`找出資料大小順序，然後選出前五筆
+```{r eval=FALSE}
 df[order(df$AQI, decreasing=TRUE)[1:5], ]
 ```
 
-## 選取空氣品質指標資料中AQI值最大的五筆紀錄
-* 在tidy的做法
-```{r}
+- tidy的做法(第一種)，可以利用`top_n()`找出資料最大的前五筆
+```{r eval=FALSE}
 top_n(df, 5, AQI)
 ```
 
-## 計算各縣市的偵測站數目
-* 先前的做法
-```{r}
+- 在tidy的做法(第二種)，先依照AQI 的數值排列df(`arrange()`)，然後再取出前五筆的Observations(`slice()`)。
+
+```{r eval=FALSE}
+arrange(df, desc(AQI)) %>%
+  slice(1:5)
+```
+
+6. 計算各縣市的偵測站數目
+
+- 先前的做法
+```{r eval=FALSE}
 table(df$County)
 ```
 
-## 計算各縣市的偵測站數目
-* 在tidy的做法
-```{r}
+- 在tidy的做法：先依照縣市欄位的資料將紀錄分群，再彙整統計每一分群的資料數量
+```{r eval=FALSE}
 group_by(df, County) %>%
   summarise(count=n())
 ```
-* %>% (pipe) 是tidy中相當重要的方法，可以將多個函數串接使用
-* 對上面計算各縣市偵測站數目的結果排序
-```{r}
+
+- 對上面計算各縣市偵測站數目的結果排序
+```{r eval=FALSE}
 group_by(df, County) %>%
   summarise(count=n()) %>%
   arrange(desc(count))
 ```
 
-# 資料整理
-## 將縣市欄位改為factor型態
+### 資料整理
+
+1. 去除AQI為NA的資料紀錄
+```{r}
+df <- filter(df, !is.na(AQI))
+```
+
+2. 將縣市欄位改為factor型態
 ```{r}
 df <- mutate(df, County=factor(County))
 ```
 
-## 將空氣品質狀態欄位改為有順序的factor型態
+3. 將空氣品質狀態欄位改為有順序的factor型態
 ```{r}
-df <- mutate(df, Status=factor(Status, levels=c("良好", "普通", "對敏感族群不健康"), ordered=TRUE))
+df <- mutate(df, Status=factor(Status, levels=c("設備維護", "良好", "普通", "對敏感族群不健康", "對所有族群不健康", "危害"), ordered=TRUE))
 ```
 
-# 資料分析
-## 回答以下幾個問題
-* 針對某一縣市，找出它有哪幾個偵測站？
-    + 關鍵點：選擇偵測站所在縣市
-* 空氣品質最糟糕的偵測站？
-    + 關鍵點：空氣品質指數最高的紀錄是第幾筆
-* 找出汙染物是細懸浮微粒的偵測站數量？
-    + 關鍵點：選擇汙染物是細懸浮微粒的偵測站，然後計算它的數量
-* 計算各種空氣品質狀態的偵測站數量？
-    + 關鍵點：對各種空氣品質狀態統計
+## 資料分析
 
-## 雲林縣有哪幾個偵測站
-* 找出雲林縣的紀錄
-* 選擇偵測站名稱
-```{r}
+利用環保署的AQI資料，回答以下幾個問題：
+
+1. 針對某一縣市，找出它有哪幾個偵測站？
+    - 關鍵點：選擇偵測站所在縣市
+    
+2. 空氣品質最糟糕的偵測站？
+    - 關鍵點：空氣品質指數最高的紀錄是第幾筆
+    
+3. 找出汙染物是細懸浮微粒的偵測站數量？
+    - 關鍵點：選擇汙染物是細懸浮微粒的偵測站，然後計算它的數量
+    
+4. 計算各種空氣品質狀態的偵測站數量？
+    - 關鍵點：對各種空氣品質狀態統計
+
+### 找出某一縣市的偵測站
+
+以雲林縣為例，找出縣市名稱為雲林縣的Observations。然後，選擇偵測站名稱。
+
+```{r eval=FALSE}
 filter(df, County=="雲林縣") %>%
   select(SiteName)
 ```
 
-##  練習
-* 新北市各偵測站的空氣品質指數分別是多少
+**練習**
 
-## 哪個偵測站偵測到的空氣品質最糟糕
-* 找到AQI最高的偵測站
-* 列出偵測站名稱及AQI值
-```{r}
+新北市各偵測站的空氣品質指數分別是多少
+
+### 找出空氣品質最糟糕的偵測站
+
+找到AQI最高的Observations，列出偵測站名稱及AQI值
+
+```{r eval=FALSE}
 top_n(df, 1, AQI) %>%
   select(SiteName, AQI)
 ```
 
-## 練習
-* 空氣品質最糟糕的偵測站偵測到的PM10和PM2.5指數各是多少？
+**練習**
 
-## 哪幾個偵測站偵測到的空氣品質超過100
-* 找到AQI值超過100的紀錄
-* 選擇偵測站名稱與AQI值
-```{r}
-filter(df, AQI>=100) %>%
-  select(SiteName, AQI)
-```
+空氣品質最糟糕的偵測站偵測到的PM10和PM2.5指數各是多少？
 
-## 練習
-* 空氣品質指標超過100的偵測站都在哪幾個縣市？
+### 找出汙染物是細懸浮微粒的偵測站數量
 
-## 多少個偵測站的汙染物是細懸浮微粒
-* 找到汙染物是細懸浮微粒的紀錄
-* 計算記錄筆數
-```{r}
+找到汙染物是細懸浮微粒的Observation，然後計算Observation數量
+
+```{r eval=FALSE}
 filter(df, Pollutant=="細懸浮微粒") %>%
   summarise(count=n())
 ```
 
-## 依據測得的AQI，各種指標等級分別有多少偵測站？
-```{r}
+### 計算各種空氣品質狀態的偵測站數量
+
+依據空氣品質狀態分群，統計各分群的數量，然後進行排序
+
+```{r eval=FALSE}
 group_by(df, Status) %>%
   summarise(count=n()) %>%
   arrange(desc(count))
 ```
 
-# 本次課程小結
-## 小結
-* 資料分析時，通常將要分析的資料整理成具有相同欄位的紀錄集合，稱為結構性資料表
-* 常見的結構性資料表，如Excel的格式
-* 在R語言中以data frame或是tibble(tidy data format)的方式表示結構性資料表
-* 特別要注意的是結構性資料表中，最好每一個紀錄代表一次的觀察資料
+## 小結 {-}
 
-## 小結
-* 針對要分析的問題，先思考分析步驟，利用自己的語言將它表示出來
-* 將每個分析步驟，表示成一個tibble方法
-* 如果某個步驟無法用一個方法表示，也許這個步驟可以再細分成兩個以上的子步驟
-* 然後利用pipe(%>%)將方法串接起來
+- 資料分析時，通常將要分析的資料整理成具有相同Variables的Observation集合，稱為**結構性資料表**。常見的結構性資料表，如Excel的格式。在R語言中，data frame或是tidy資料格式的tibble也是結構性資料表。特別要注意的是結構性資料表中，最好每一個Observation代表一次的觀察資料。
 
-## 小結
-* 選取特定欄位
-    + select()
-* 選取特定紀錄
-    + slice()按照位置
-    + filter()按照索引條件
-    + top_n()按照索引條件，並只選出前幾筆紀錄
-* 排序
-    + arrange()
-* 將記錄分成群組
-    + group_by()
-* 彙整(對整個資料表或紀錄群組進行統計)
-    + summarise()
+- 針對要分析的問題，可以先思考分析步驟，利用自己的語言將它表示出來。然後將每個分析步驟，表示成一個tidy函數。如果某個步驟無法用一個函數表示，也許這個步驟可以再細分成兩個以上的子步驟，利用pipe(%>%)將函數串接起來。先練習幾次，會愈來愈熟練。
 
-## 小結
-* 不需要強記各種方法，經常練習運用，便會自然熟練
-* 有需要時，可參考懶人包 https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf
+- 不需要強記各種函數，經常練習運用，便會自然熟練
+    - 選取特定欄位
+        - `select()`
+    - 選取特定紀錄
+        - `slice()`按照位置
+        - `filter()`按照索引條件
+        - `top_n()`按照索引條件，並只選出前幾筆紀錄
+    - 排序
+        - `arrange()`
+    - 將記錄分成群組
+        - `group_by()`
+    - 彙整(對整個資料表或紀錄群組進行統計)
+        - `summarise()`
+
+有需要時，可參考[懶人包](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+
+## 延伸思考 {-}
+
+- 就你自己的體會，當面對一個問題時，如何將它轉換成一步步的步驟，來解決這個問題？
+
+- 什麼時候適合使用long format？什麼時候適合使用wide format？
