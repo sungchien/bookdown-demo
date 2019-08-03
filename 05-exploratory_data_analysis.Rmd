@@ -1,0 +1,252 @@
+# 利用R語言進行探索性資料分析 {#exploratory_data_analysis}
+
+## 課程簡介 {-}
+
+### 課程簡介 {-}
+
+## 探索性資料分析是什麼？
+
+探索性資料分析是指利用描述統計和圖形表示等方式對資料進行初步調查，目的是發現模式(patterns)，偵測異常(anomalies)以及檢驗假設(assumptions)。
+
+目前並沒有十分嚴格的探索性資料分析流程。但大部分的資料可以依據以下的步驟進行：
+
+1. 發現資料中每個Variable的型態與的意義。找出或轉換了解問題所需的資料Variables。
+
+2. 資料中是否有錯誤，例如資料重複或輸入錯誤？發生在那些Variable上？如何處理這些錯誤？
+
+3. 資料中是否有遺漏值 (missing values)，發生在那些Variable上？如何處理這些遺漏值？
+
+4. 根據資料的分布情形，哪些是與其他資料大不相同的異常值(outliers)？這些異常值要如何處理？
+
+5. 資料是否需要彙整？換句說，將以一筆資料**代表**一群相關的Observations。如何代表？
+
+6. Variables有無需要進行合併？如何進行合併？
+
+7. 形成問題的假設，從資料中發展出想要了解的問題。
+
+8. 有必要的話，重複上面的各個步驟。
+
+## 以環保署日空氣品質指標開放資料為例進行探索性資料分析
+
+事實上，利用[運用R語言進行資料處理]、[Tidyverse簡介]和[資料視覺化]等前面幾個章節的內容，已經能夠做到相當不錯的探索性資料分析。下面我們從[環保署資料開放平台](https://opendata.epa.gov.tw/)上取得從資料開放以來的[日空氣品質指標](https://opendata.epa.gov.tw/Data/Contents/ATM00679/)。請同學利用前面幾個章節的技巧進行探索性資料分析。
+
+```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+```{r eval=FALSE, echo=FALSE}
+records <- 0
+tot_df <- data.frame()
+eof_flag <- FALSE
+while(eof_flag==FALSE) {
+  path <- paste0("http://opendata.epa.gov.tw/webapi/Data/ATM00679/?$orderby=MonitorDate%20desc&$skip=",
+                 records,
+                 "&$top=1000&format=csv")
+
+  df <- read.csv(path, 
+               fileEncoding="UTF-8-BOM",
+               stringsAsFactors = FALSE)
+
+  tot_df <- rbind(tot_df, df)
+  if (nrow(df)<1000) eof_flag <- TRUE
+  else records <- records+1000
+}
+
+
+write.csv(tot_df, file="AQI_data_2019_07_26.csv", row.names = FALSE)
+```
+
+0. 讀取日空氣品質指標檔案
+```{r}
+df <- read.csv("AQI_data_2019_07_26.csv", stringsAsFactors = FALSE)
+```
+
+1.1 查看資料的Observation和Variable數量 (請寫出程式碼)
+```{r echo=FALSE}
+dim(df)
+```
+
+1.2 查看資料型態 (請寫出程式碼)
+```{r echo=FALSE}
+str(df)
+```
+
+1.3 查看前後各五筆資料 (請寫出程式碼)
+```{r echo=FALSE}
+slice(df, c(1:5, (nrow(df)-4):nrow(df)))
+```
+
+1.4 根據以上資料，說明中每個Variable的型態與的意義
+
+2.1 資料是否有重複？同一日期同一偵測站應只有一筆Observation，列出重複的資料
+```{r echo=FALSE}
+group_by(df, MonitorDate, SiteName) %>%
+  summarise(count=n()) %>%
+  filter(count>1)
+```
+
+2.2 刪除重複資料
+```{r}
+df <- distinct(df)
+```
+
+2.3 檢視所有的偵測站名稱(SiteName)
+```{r}
+unique(df$SiteName)
+```
+
+2.4 查看資料筆數最少的5個偵測站
+```{r echo=FALSE}
+df %>%
+  group_by(SiteName) %>%
+  summarise(count=n()) %>%
+  arrange(count) %>%
+  slice(1:5)
+```
+
+2.5 觀察上面的結果，有什麼想法？如何驗證妳/你的想法？
+
+2.6 將監測日期(MonitorDate)的資料型態改成Date
+```{r}
+df <- mutate(df, MonitorDate=as.Date(MonitorDate))
+```
+
+2.7 列出資料量最少的5個監測日期
+```{r echo=FALSE}
+df %>%
+  group_by(MonitorDate) %>%
+  summarise(count=n()) %>%
+  arrange(count) %>%
+  slice(1:5)
+```
+
+2.7 利用折線圖畫出每一天紀錄中的偵測站數量
+```{r}
+df %>%
+  group_by(MonitorDate) %>%
+  summarise(count=n()) %>%
+  ggplot() +
+  geom_line(aes(x=MonitorDate, y=count)) +
+  scale_x_date(date_breaks="1 month") +
+  scale_y_continuous(limits=c(0,80), breaks=seq(0, 80, 5)) +
+  labs(x="偵測日期", y="偵測站數量") +
+  theme(axis.text.x=element_text(angle=60, hjust=1),
+        panel.background = element_blank())
+```
+
+2.8 看了上面的數據和每天的偵測站數量統計折線圖，有什麼想法？如何驗證妳/你的想法？
+
+3.1 利用`summary()`檢視所有variables的資料情形，瞭解資料的分布區間和有多少的NA
+```{r}
+summary(df)
+```
+
+3.2 觀察上面的結果，你對這個資料的遺漏值(NA)有什麼想法？如何驗證妳/你的想法？
+
+3.3 列出AQI為NA的資料
+```{r}
+filter(df, is.na(AQI))
+```
+
+3.4 刪除AQI為NA的資料
+```{r echo=FALSE}
+df <- filter(df, !is.na(AQI))
+```
+
+4.1 利用直方圖觀察AQI的分布情形
+```{r}
+ggplot(df) +
+  geom_histogram(aes(x=AQI), breaks=seq(0, 250, 25)) +
+  scale_x_continuous(breaks=seq(0, 250, 25), limits=c(0, 250)) +
+  labs(y="天數") +
+  theme(panel.background = element_blank())
+```
+
+4.2 利用盒狀圖觀察AQI的分布情形
+```{r}
+ggplot(df) +
+  geom_boxplot(aes(x=1, y=AQI)) +
+  theme(axis.title.x = element_blank(),
+        panel.background = element_blank())
+```
+
+4.3 觀察上面的直方圖與盒鬚圖，你對這個資料的異常值有什麼想法？如何驗證妳/你的想法？
+
+4.4 列出AQI值大於150的資料
+```{r echo=FALSE}
+filter(df, AQI>200)
+```
+
+5.1 利用折線圖繪製每個偵測站的AQI變化，以新店站為例
+```{r echo=FALSE}
+filter(df, SiteName=="新店") %>%
+  ggplot() +
+  geom_line(aes(x=MonitorDate, y=AQI)) +
+  scale_x_date(date_breaks="1 month") +
+  scale_y_continuous(limits=c(0, 250), breaks=seq(0, 250, 25)) +
+  labs(x="監測日期") +
+  theme(axis.text.x=element_text(angle=60, hjust=1),
+        panel.background = element_blank())
+```
+
+5.2 觀察時並不需要過於仔細的資料，可以將各偵測站每個月的資料彙整成一筆
+
+5.3 載入lubridate套件處理日期資料
+```{r results='hide', message=FALSE, warning=FALSE}
+library(lubridate)
+```
+
+5.4 增加年度欄位，利用盒狀圖，比較同一偵測站在不同年度的空氣品質
+```{r}
+filter(df, SiteName=="新店") %>%
+  mutate(Year=as.factor(year(MonitorDate))) %>%
+  ggplot() +
+  geom_boxplot(aes(x=Year, y=AQI, color=Year)) +
+  scale_y_continuous(limits=c(0, 250), breaks=seq(0, 250, 25)) +
+  scale_color_manual(values=c("navyblue", "firebrick", "forestgreen")) +
+  scale_fill_manual(values=c("lightblue", "lightpink", "seagreen")) +
+  labs(x="監測年度") +
+  theme(panel.background = element_blank())
+
+```
+
+5.5 增加年以及月分兩個欄位,依據偵測站名稱和年與月分分群，計算各偵測站每個月AQI的中位數以及第一和第三四分位數
+```{r}
+ym_df <- mutate(df, YearMonth=floor_date(MonitorDate, "month")) %>%
+  group_by(SiteName, YearMonth) %>%
+  summarise(AQI_median = median(AQI),
+            AQI_p10=quantile(AQI, 0.10),
+            AQI_p90=quantile(AQI, 0.90),
+            AQI_min=min(AQI),
+            AQI_max=max(AQI)) %>%
+  ungroup()
+```
+
+5.6 繪製每個偵測站的AQI變化，以新店站為例
+```{r}
+filter(ym_df, SiteName=="新店") %>%
+  ggplot() +
+  geom_ribbon(aes(x=YearMonth, ymin=AQI_min, ymax=AQI_max), fill="grey", alpha=0.5) +
+  geom_line(aes(x=YearMonth, y=AQI_median)) +
+  scale_x_date(date_breaks="1 month", date_labels="%Y-%m") +
+  scale_y_continuous(limits=c(0, 250), breaks=seq(0, 250, 25)) +
+  labs(x="監測年月") +
+  theme(axis.text.x=element_text(angle=60, hjust=1),
+        panel.background = element_blank())
+```
+
+6.1 一次繪製多個觀測站資料
+```{r echo=FALSE}
+filter(ym_df, SiteName %in% c("新店", "楠梓")) %>%
+  ggplot() +
+  geom_ribbon(aes(x=YearMonth, ymin=AQI_p10, ymax=AQI_p90, fill=SiteName, group=SiteName), alpha=0.5) +
+  geom_line(aes(x=YearMonth, y=AQI_median, color=SiteName, group=SiteName)) +
+  scale_x_date(date_breaks="1 month", date_labels="%Y-%m") +
+  scale_y_continuous(limits=c(0, 250), breaks=seq(0, 250, 25)) +
+  scale_color_manual(values=c("navyblue", "firebrick")) +
+  scale_fill_manual(values=c("lightblue", "lightpink")) +
+  labs(x="監測年月") +
+  theme(axis.text.x=element_text(angle=60, hjust=1),
+        panel.background = element_blank())
+```
+

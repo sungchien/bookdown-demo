@@ -1,0 +1,172 @@
+# 利用R語言進行基本的統計分析 {#statistical_analysis}
+
+## 課程簡介 {-}
+
+### 課程簡介 {-}
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+```
+
+讀取日空氣品質指標檔案
+```{r}
+df <- read.csv("AQI_data_2019_07_26.csv", stringsAsFactors = FALSE)
+```
+
+資料的清理
+```{r}
+df <- distinct(df) %>%
+  filter(!is.na(AQI)) %>%
+  mutate(MonitorDate=as.Date(MonitorDate))
+```
+
+## 描述性統計
+
+### 測量資料的集中趨勢
+
+當有大量資料時，會希望用一個最具有代表性的數值來表示這些數值。此時，在統計上通常一般會使用**平均數(mean)**或**中位數(median)**表示這些資料。以新店偵測站為例，如果要選擇一個數值代表該偵測站今年(2019年)一月到六月測得的空氣品質指標：
+
+0. 取出新店偵測站2019年一月到六月測得的空氣品質指標
+```{r}
+aqi_data <- filter(df, SiteName=="新店") %>%
+  filter(MonitorDate>=as.Date("2019/01/01") & MonitorDate<=as.Date("2019/06/30"))
+```
+
+資料的前五筆與後五筆，什麼樣的資料最有代表性？
+```{r echo=FALSE}
+select(aqi_data, MonitorDate, AQI) %>%
+  slice(c(1:5, (nrow(.)-4):nrow(.))) %>%
+  knitr::kable()
+```
+
+1. 平均數 (所有的資料加總後，除以資料個數)
+```{r}
+mean(aqi_data$AQI)
+```
+
+2. 中位數 (所有的資料依大小順序排列後，取出位於中間的資料)
+```{r}
+median(aqi_data$AQI)
+```
+
+### 測量資料的離散程度
+
+除了以一個最具有代表性的數值表示整體資料之外，對於資料還需要了解它們的離散情形，也就是具有代表性的資料範圍。一般統計學上，常用來測量資料離散程度的方式有全距、四分位距、變異數和標準差。以下仍以新店偵測站今年一月到六月的空氣品質指標資料為例，計算上述的數值：
+
+1. 全距 (資料的最大值減最小值)
+```{r}
+max(aqi_data$AQI) - min(aqi_data$AQI)
+```
+
+2. 四分位距 (資料的第三四分位數減第一四分位數)
+```{r}
+IQR(aqi_data$AQI)
+```
+
+3. 變異數 (資料與平均數之間的差稱為誤差，誤差平方的平均數便是變異數)
+```{r}
+var(aqi_data$AQI)
+```
+
+4. 標準差 (變異數的平方根)
+```{r}
+sd(aqi_data$AQI)
+```
+
+**討論**
+
+不同的資料離散程度測量方式有不同的特質與適用時機，請說明這些測量方式的限制與適用情形。
+
+### 偏態與峰態
+
+計算偏態與峰態，請先安裝與載入套件e1071
+```{r eval=FALSE}
+install.packages("e1071")
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(e1071)
+```
+
+
+偏態是測量資料與平均數相比，小的數值較多或大的數值較多的，如果資料愈接近對稱，偏態值便為0，如果左偏態(左側的尾部較長)，偏態值為負；反之右側的尾部較長，偏態值為正。如以下利用直方圖呈現新店偵測站今年一月到六月的空氣品質指標資料的圖形為例，大家可以猜想這個資料的偏態值為正或負？
+```{r echo=FALSE}
+aqi_data %>%
+  ggplot() +
+  geom_histogram(aes(x=AQI), breaks=seq(0,200,10)) +
+  scale_x_continuous(breaks=seq(0,200,10)) +
+  labs(y="天數") +
+  theme(panel.background = element_blank())
+```
+
+偏態值的計算
+```{r}
+skewness(aqi_data$AQI)
+```
+
+峰態是表示資料的分布較狹窄或平坦，較狹窄的資料分布，其峰態為正；反之，較平坦的話，則為負。峰態的計算如下：
+
+```{r}
+ kurtosis(aqi_data$AQI)
+```
+
+## 資料相關性
+
+以下是某三個監測站X1, X2, X3的今年一到六月的空氣品質資料。請問X1與其他兩個監測站彼此間的相關程度如何？也就是是否有當X1的資料愈大時，X2的資料也愈大的現象，或是相反的，X1的資料愈大時，X2的資料卻愈小，或者兩者之間沒有關係。
+
+```{r echo=FALSE}
+aqi_data_set <- filter(df, SiteName %in% c("新店", "永和", "臺東")) %>%
+  select(MonitorDate, SiteName, AQI) %>%
+  filter(MonitorDate>=as.Date("2019/01/01") & MonitorDate<=as.Date("2019/06/30")) %>%
+  spread(key=SiteName, value=AQI) %>%
+  rename(X1=新店, X2=永和, X3=臺東) %>%
+  filter(!is.na(X1)&!is.na(X2)&!is.na(X3))
+
+print(aqi_data_set$X1)
+
+print(aqi_data_set$X2)
+
+print(aqi_data_set$X3)
+
+```
+
+直接觀察數據並不容易判斷，如果畫成圖形可能比較容易觀察。
+
+```{r eval=FALSE}
+lm1 <- lm(X2~X1, aqi_data_set)
+
+ggplot(aqi_data_set) +
+  geom_point(aes(x=X1, y=X2), color="navyblue") +
+  geom_abline(aes(intercept=lm1$coefficients[1], slope=lm1$coefficients[2])) +
+  scale_x_continuous(breaks=seq(0, 200, 25), limits=c(0, 200)) +
+  scale_y_continuous(breaks=seq(0, 200, 25), limits=c(0, 200)) +
+  labs(x="X2監測站AQI值", y="X1監測站AQI值") +
+  theme(panel.background = element_blank())
+```
+
+```{r}
+lm2 <- lm(X3~X1, aqi_data_set)
+
+ggplot(aqi_data_set) +
+  geom_point(aes(x=X1, y=X3), color="firebrick") +
+  geom_abline(aes(intercept=lm2$coefficients[1], slope=lm2$coefficients[2])) +
+  scale_x_continuous(breaks=seq(0, 200, 25), limits=c(0, 200)) +
+  scale_y_continuous(breaks=seq(0, 200, 25), limits=c(0, 200)) +
+  labs(x="新店AQI值", y="X2監測站AQI值") +
+  theme(panel.background = element_blank())
+```
+
+圖形分布愈趨近於往上的直線者，兩者資料的相關性愈趨近於1。
+
+或是利用`cor()`函數計算兩者資料的相關性
+```{r}
+cor(aqi_data_set$X1, aqi_data_set$X2)
+```
+
+```{r}
+cor(aqi_data_set$X1, aqi_data_set$X3)
+```
+
+
+## 比較兩組資料
