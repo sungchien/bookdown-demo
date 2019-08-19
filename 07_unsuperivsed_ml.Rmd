@@ -1,0 +1,266 @@
+# 利用R語言進行非監督式機器學習 {#exploratory_data_analysis}
+
+## 課程簡介 {-}
+
+### 課程簡介 {-}
+
+
+### 學習目標 {-}
+
+運用探索性資料分析
+
+
+## 機器學習
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(jsonlite)
+```
+
+讀取站點每日進出人數資料
+```{r}
+df <- fromJSON("https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/8ae4cabf6973990e0169947ed32454b9")
+```
+
+查看資料型態
+```{r}
+summary(df)
+```
+
+改變資料型態
+```{r}
+df <- df %>%
+  mutate(trnOpDate=ymd(trnOpDate)) %>%
+  mutate(gateInComingCnt=as.numeric(gateInComingCnt)) %>%
+  mutate(gateOutGoingCnt=as.numeric(gateOutGoingCnt))
+```
+
+因為出入站資料僅有包含站點編號，所以從另外一個開放資料讀取站點名稱資料
+```{r}
+site.df <- fromJSON("http://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/0518b833e8964d53bfea3f7691aea0ee")
+```
+
+將進出站點資料加入站點名稱
+```{r}
+df <- df %>%
+  left_join(select(site.df, staCode=stationCode, staName=stationName))
+```
+
+是否有站點資料缺少站點名稱？
+```{r}
+df[is.na(df$staName),]
+```
+
+刪除沒有站點名稱的資料
+```{r}
+df <- df %>%
+  filter(!is.na(staName))
+```
+
+畫出台北進出站人數範圍
+```{r}
+df %>%
+  filter(staName=="臺北") %>%
+  rename(In=gateInComingCnt, Out=gateOutGoingCnt) %>%
+  gather(key=IO, value=Count, -staName, -staCode, -trnOpDate) %>%
+  ggplot() +
+  geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
+  scale_y_continuous(limits=c(0, 90000), breaks=seq(0, 90000, 10000)) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey20"),
+        panel.grid.major = element_line(color="grey90"))
+```
+從圖形上可以觀察到5月後資料的數量級較之前大非常多
+
+所有站點是否有同樣情形？
+```{r}
+df %>%
+  group_by(trnOpDate) %>%
+  summarise(In=sum(gateInComingCnt), Out=sum(gateOutGoingCnt)) %>%
+  gather(key=IO, value=Count, -trnOpDate) %>%
+  ggplot() +
+  geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
+  scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey20"),
+        panel.grid.major = element_line(color="grey90"))
+```
+
+刪除五月以前的資料，再重新檢視
+```{r}
+df <- df %>%
+  filter(trnOpDate>=as.Date("2019-05-01"))
+
+df %>%
+  group_by(trnOpDate) %>%
+  summarise(In=sum(gateInComingCnt), Out=sum(gateOutGoingCnt)) %>%
+  gather(key=IO, value=Count, -trnOpDate) %>%
+  ggplot() +
+  geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
+  scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey20"),
+        panel.grid.major = element_line(color="grey90"))
+```
+
+每個站點每天平均進出站人數
+```{r}
+df %>%
+  group_by(staName) %>%
+  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  ungroup() %>%
+  arrange(desc(In))
+```
+
+選取中等規模的站點(每天平均5000人到15000人)
+```{r}
+cand_sta <- df %>%
+  group_by(staName) %>%
+  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  ungroup() %>%
+  filter(In>=5000 & In<=15000) %>%
+  pull(staName)
+```
+
+從原始資料中取出中等規模站點的資料
+```{r}
+df1 <- df %>%
+  filter(staName %in% cand_sta)
+```
+
+檢視汐科站在一週每天的進出人數分布範圍
+```{r}
+df1 %>%
+  filter(staName=="汐科") %>%
+  rename(In=gateInComingCnt, Out=gateOutGoingCnt) %>%
+  gather(key="Var", value="Count", -staName, -staCode, -trnOpDate) %>%
+  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  ggplot() +
+  geom_boxplot(aes(x=Var, y=Count)) +
+  scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
+  facet_wrap(~trnOpDateW, nrow=2)
+```
+
+檢視臺東站在一週每天的進出人數分布範圍
+```{r}
+df1 %>%
+  filter(staName=="臺東") %>%
+  rename(In=gateInComingCnt, Out=gateOutGoingCnt) %>%
+  gather(key="Var", value="Count", -staName, -staCode, -trnOpDate) %>%
+  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  ggplot() +
+  geom_boxplot(aes(x=Var, y=Count)) +
+  scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
+  facet_wrap(~trnOpDateW, nrow=2)
+```
+
+注意週日和週五、週六與平日的情形，汐科站平日進出站人數多於週日和週六，每天的進出站人數大致相同；臺東站的週五和週六出站多於進站，週日則相反，且都多於平日。
+
+首以長條圖顯示上述的進出站人數變化現象，。
+
+```{r}
+df1 %>%
+  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  group_by(staName, trnOpDateW) %>%
+  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  ungroup() %>%
+  gather(key=variable, value=value, -staName, -trnOpDateW) %>%
+  group_by(staName) %>%
+  mutate(value=value/sum(value)) %>%
+  filter(staName %in% c("汐科", "斗六", "新烏日", "臺東")) %>%
+  ggplot() +
+  geom_col(aes(x=trnOpDateW, y=value)) +
+  facet_grid(staName~variable)
+```
+
+以下的研究即利用這個觀察到的現象將資料分群。首先產生每一個站點的資料特徵。
+```{r}
+sta_inf <- df1 %>%
+  mutate(trnOpDateW=wday(trnOpDate, locale="English", label=TRUE)) %>%
+  group_by(staName, trnOpDateW) %>%
+  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  ungroup() %>%
+  gather(key=variable, value=value, -staName, -trnOpDateW) %>%
+  group_by(staName) %>%
+  mutate(value=value/sum(value)) %>%
+  unite(temp, trnOpDateW, variable) %>%
+  spread(key=temp, value=value)
+```
+
+檢視產生的資料
+```{r}
+summary(sta_inf)
+```
+
+取出各站點的特徵
+```{r}
+sta_inf.mat <- as.matrix(sta_inf[,2:ncol(sta_inf)])
+```
+
+## 將站點依據彼此距離視覺化
+
+本節中將依據站點彼此間的距離，將各站點映射到圖形上，使距離較近的站點在圖形上的距離也較近
+
+載入映射演算法套件
+```{r}
+library(Rtsne)
+```
+
+計算站點之間的距離
+```{r}
+sta_d <- dist(normalize_input(sta_inf.mat))
+```
+
+依據站點之間的距離計算站點映射在圖形上的位置
+```{r}
+tsne_out <- Rtsne(sta_d, theta=0.0, is_distance=TRUE)
+```
+
+將站點加上映射的坐標
+```{r}
+sta_inf %>%
+  mutate(x=tsne_out$Y[,1], y=tsne_out$Y[,2]) %>%
+  ggplot() +
+  geom_text(aes(x=x, y=y, label=staName), size=3) +
+  coord_fixed()
+```
+
+## 站點分群
+
+載入分群演算法套件
+```{r}
+library(apcluster)
+```
+
+```{r}
+s1 <- -as.matrix(sta_d)
+```
+
+```{r}
+res <- apcluster(s1, q=0.1)
+```
+
+```{r}
+for (i in seq(length(res@clusters))) {
+  print(paste("Cluster", i))
+  print(sta_inf$staName[res@clusters[[i]]])
+}
+
+```
+
+```{r}
+sta.cl <- integer(nrow(sta_inf))
+for (i in seq(length(res@clusters))) {
+  sta.cl[res@clusters[[i]]] <- i
+}
+```
+
+```{r}
+sta_inf %>%
+  mutate(x=tsne_out$Y[,1], y=tsne_out$Y[,2]) %>%
+  mutate(cl=factor(sta.cl)) %>%
+  ggplot() +
+  geom_text(aes(x=x, y=y, label=staName, color=cl), size=3) +
+  coord_fixed()
+```

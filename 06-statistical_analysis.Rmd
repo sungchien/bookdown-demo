@@ -4,6 +4,7 @@
 
 ### 課程簡介 {-}
 
+載入所需的套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(tidyverse)
 library(lubridate)
@@ -15,6 +16,9 @@ df <- read.csv("AQI_data_2019_07_26.csv", stringsAsFactors = FALSE)
 ```
 
 資料的清理
+
+- 移除AQI遺漏的資料
+- 將日期改為Date資料型態
 ```{r}
 df <- distinct(df) %>%
   filter(!is.na(AQI)) %>%
@@ -54,14 +58,18 @@ median(aqi_data$AQI)
 
 除了以一個最具有代表性的數值表示整體資料之外，對於資料還需要了解它們的離散情形，也就是具有代表性的資料範圍。一般統計學上，常用來測量資料離散程度的方式有全距、四分位距、變異數和標準差。以下仍以新店偵測站今年一月到六月的空氣品質指標資料為例，計算上述的數值：
 
-1. 全距 (資料的最大值減最小值)
+1. 全距(range) (資料的最大值減最小值)
 ```{r}
 max(aqi_data$AQI) - min(aqi_data$AQI)
 ```
 
-2. 四分位距 (資料的第三四分位數減第一四分位數)
+2. 四分位距(interquartile range) (資料的第三四分位數減第一四分位數)
 ```{r}
 IQR(aqi_data$AQI)
+```
+另一種寫法，利用`quantile()`計算出第三四分位數和第一四分位數
+```{r}
+quantile(aqi_data$AQI, 0.75) - quantile(aqi_data$AQI, 0.25)
 ```
 
 3. 變異數 (資料與平均數之間的差稱為誤差，誤差平方的平均數便是變異數)
@@ -111,6 +119,38 @@ skewness(aqi_data$AQI)
  kurtosis(aqi_data$AQI)
 ```
 
+### 小結
+
+描述性統計測量資料X的若干特性，包括：
+
+- 集中趨勢
+    - 平均數 (`mean(X)`)
+    - 中位數 (`median(X)`)
+- 離散程度
+    - 全域 (`max(X)-min(X)`)
+    - 四分位距 (`IRQ(X)`或`quantile(X, 0.75)-quantile(X, 0.25)`)
+    - 變異數 (`var(X)`)
+    - 標準差 (`sd(X)`)
+- 偏態 (`skewness(X)`)
+- 峰態 (`kurtosis(X)`)
+
+** 練習 **
+本課程提供某一個對不同推薦策略的研究結果user_text.xlsx，每一個Observation包含14個Variables，UserID是使用者編號，involvement、diversity和openness是三種人格特質。請讀取這個檔案，並設法運用描述性統計分析這個檔案中的三種人格特質。
+
+```{r echo=FALSE}
+library(readxl)
+df1 <- read_excel("user_test.xlsx")
+print(paste0("平均數為", mean(df1$involvement)))
+print(paste0("中位數為", median(df1$involvement)))
+print(paste0("全距為", max(df1$involvement)-min(df1$involvement)))
+print(paste0("四分位距為", IQR(df1$involvement)))
+print(paste0("變異數為", var(df1$involvement)))
+print(paste0("標準差為", sd(df1$involvement)))
+print(paste0("偏態為", skewness(df1$involvement)))
+print(paste0("峰態為", kurtosis(df1$involvement)))
+```
+
+
 ## 資料相關性
 
 以下是某三個監測站X1, X2, X3的今年一到六月的空氣品質資料。請問X1與其他兩個監測站彼此間的相關程度如何？也就是是否有當X1的資料愈大時，X2的資料也愈大的現象，或是相反的，X1的資料愈大時，X2的資料卻愈小，或者兩者之間沒有關係。
@@ -131,7 +171,7 @@ print(aqi_data_set$X3)
 
 ```
 
-直接觀察數據並不容易判斷，如果畫成圖形可能比較容易觀察。
+直接觀察數據並不容易判斷，如果畫成圖形可能比較容易觀察,。將每一個Observation畫為圖形上的一個點，觀察這些點形成的樣式是否接近直線以及其上揚或下抑的趨勢。
 
 ```{r eval=FALSE}
 lm1 <- lm(X2~X1, aqi_data_set)
@@ -168,5 +208,46 @@ cor(aqi_data_set$X1, aqi_data_set$X2)
 cor(aqi_data_set$X1, aqi_data_set$X3)
 ```
 
+**練習**
+比較前面對不同推薦策略的研究結果中的三種人格特質彼此間的相關性。
 
-## 比較兩組資料
+## 比較兩組資料的平均數
+
+以下分別取出去年(2018年)和今年(2019年)一到六月新店偵測站的AQI指標值，計算兩段時間的平均值
+
+```{r}
+y2018.df <- df %>%
+  filter(MonitorDate>=as.Date("2018/01/01") & MonitorDate<=as.Date("2018/06/30")) %>%
+  filter(SiteName=="新店")
+
+print(paste0("2018年一到六月新店偵測站的AQI指標平均值", mean(y2018.df$AQI)))
+```
+
+```{r}
+y2019.df <- df %>%
+  filter(MonitorDate>=as.Date("2019/01/01") & MonitorDate<=as.Date("2019/06/30")) %>%
+  filter(SiteName=="新店")
+
+print(paste0("2019年一到六月新店偵測站的AQI指標平均值", mean(y2019.df$AQI)))
+```
+
+```{r}
+df %>%
+  filter((MonitorDate>=as.Date("2018/01/01") & MonitorDate<=as.Date("2018/06/30"))|(MonitorDate>=as.Date("2019/01/01") & MonitorDate<=as.Date("2019/06/30"))) %>%
+  mutate(Year=factor(year(MonitorDate))) %>%
+  ggplot(aes(x=AQI, color=Year)) +
+  geom_density() +
+  geom_vline(xintercept=mean(y2018.df$AQI), color="green") +
+  geom_vline(xintercept=mean(y2019.df$AQI), color="blue") +
+  scale_color_manual(values=c("green", "blue"))
+```
+
+```{r}
+t.test(y2018.df$AQI, y2019.df$AQI)
+```
+
+
+```{r}
+t.test(y2018.df$AQI, y2019.df$AQI, alternative="greater")
+```
+
