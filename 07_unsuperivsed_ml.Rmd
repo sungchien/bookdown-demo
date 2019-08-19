@@ -10,7 +10,31 @@
 運用探索性資料分析
 
 
-## 機器學習
+## 資料探勘的定義
+
+**資料探勘 (Data Mining)**是利用電腦演算法發掘大量資料中蘊藏的規律性、樣式或知識，以幫助人們了解與說明資料的特性或者應用規律性與樣式來預測新的資料，而通常來說這些規律性與樣式以人的認知能力並不容易發現。一般來說，資料探勘的任務目的包括預測(prediction)、關連(association)、群集(clustering)、異常偵測(anomaly detection)等等。
+
+- 預測是根據蒐集的Observation資料特徵建立一個模型(model)，來判斷新的Observation可能的資訊，蒐集的Observation一般稱為訓練集(training set)資料。預測的資訊可能是新Observations上的某一個未知數值或是實體所屬的類別，當預測的目的是判斷Observations的類別時，這種資料探勘任務又稱為分類(classification)。比較著名的預測例子，根據天氣預報資料以及地區以往雨具銷售情形，判斷未來一段時間內的雨具銷售。又如垃圾郵件偵測，便是從一些已經標示為垃圾郵件與非垃圾郵件的文字資料訓練出模型來判斷新進郵件是否為垃圾郵件。
+
+- 關連是發現在訓練資料中經常一起出現的特徵，最有名的例子便是運用購物籃分析(market basket analysis)發現啤酒與尿布的關連。
+
+- 群集是根據Observations之間的相似性(或者距離)，找出劃分Observations成若干群的方式，盡可能使得群內的Observations彼此間的相似性大於任何群外的Observations (或是彼此間的距離小於群外的距離)。相關的例子有根據詞語的上下文資訊找出語意相關的詞語群集。 (舉例而言，跟財稅金融有關的詞語它們的上下文資訊應當很相像。未來會有一章專門介紹詞語的群集。)
+
+- 異常偵測則是發現某一些Observations，其資料特性與其他多數者明顯不同。例如從信用卡的交易資料中發現盜刷的交易，或是找出健保詐騙的醫療處方箋。
+
+### 資料探勘的步驟
+
+資料探勘的目的可以定義為一個從資料庫中發現知識的過程 (Knowledge Discovering in Databases, KDD)，依據Fayyad等人於1996年提出的構想，整個KDD過程包括
+
+1. 選取資料
+2. 資料的清除與整理等前處理
+3. 轉換資料為有效描述和預測的特徵
+4. 運用機器學習(machine learning)的技術建立資料模型 (狹義的資料探勘)
+5. 解釋與應用
+
+### 資料探勘的分類
+
+資料探勘的過程中運用機器學習的技術，可以依據一部份資料中是否加入人類判斷的訊息，用來做為預測其他資料的
 
 ```{r}
 library(tidyverse)
@@ -119,7 +143,7 @@ cand_sta <- df %>%
   group_by(staName) %>%
   summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
   ungroup() %>%
-  filter(In>=5000 & In<=15000) %>%
+  filter(In>=5000) %>%
   pull(staName)
 ```
 
@@ -128,6 +152,11 @@ cand_sta <- df %>%
 df1 <- df %>%
   filter(staName %in% cand_sta)
 ```
+
+
+## 站點資料特徵
+
+站點資料特徵便是用來描述站點特性的資料。
 
 檢視汐科站在一週每天的進出人數分布範圍
 ```{r}
@@ -168,7 +197,7 @@ df1 %>%
   gather(key=variable, value=value, -staName, -trnOpDateW) %>%
   group_by(staName) %>%
   mutate(value=value/sum(value)) %>%
-  filter(staName %in% c("汐科", "斗六", "新烏日", "臺東")) %>%
+  filter(staName %in% c("汐科", "臺東")) %>%
   ggplot() +
   geom_col(aes(x=trnOpDateW, y=value)) +
   facet_grid(staName~variable)
@@ -184,6 +213,7 @@ sta_inf <- df1 %>%
   gather(key=variable, value=value, -staName, -trnOpDateW) %>%
   group_by(staName) %>%
   mutate(value=value/sum(value)) %>%
+  ungroup() %>%
   unite(temp, trnOpDateW, variable) %>%
   spread(key=temp, value=value)
 ```
@@ -198,6 +228,38 @@ summary(sta_inf)
 sta_inf.mat <- as.matrix(sta_inf[,2:ncol(sta_inf)])
 ```
 
+## 維度縮減
+
+```{r}
+sta_inf.pca <- prcomp(sta_inf.mat)
+```
+
+```{r}
+summary(sta_inf.pca)
+```
+
+```{r}
+data.frame(dim_order=seq(1, ncol(sta_inf.mat)),
+           var=sta_inf.pca$sdev^2) %>%
+  mutate(prop_varex=var/sum(var)) %>%
+  mutate(cum_prop_varex=cumsum(prop_varex)) %>%
+  ggplot(aes(x=dim_order, y=cum_prop_varex)) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(limits=c(1, ncol(sta_inf.mat)), breaks=seq(1, ncol(sta_inf.mat), 1), minor_breaks = NULL) +
+  scale_y_continuous(limits=c(0, 1), breaks=seq(0, 1, 0.1)) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="gray"),
+        panel.grid.major = element_line(color="gray70"),
+        panel.grid.minor = element_line(color="gray90"))
+```
+
+取出經過
+
+```{r}
+sta_inf.pf <- sta_inf.pca$x[, 1:3]
+```
+
 ## 將站點依據彼此距離視覺化
 
 本節中將依據站點彼此間的距離，將各站點映射到圖形上，使距離較近的站點在圖形上的距離也較近
@@ -209,17 +271,18 @@ library(Rtsne)
 
 計算站點之間的距離
 ```{r}
-sta_d <- dist(normalize_input(sta_inf.mat))
+sta_d <- dist(sta_inf.pf)
 ```
 
 依據站點之間的距離計算站點映射在圖形上的位置
 ```{r}
-tsne_out <- Rtsne(sta_d, theta=0.0, is_distance=TRUE)
+tsne_out <- Rtsne(sta_d, perplexity=5, theta=0.0, is_distance=TRUE)
 ```
 
 將站點加上映射的坐標
 ```{r}
 sta_inf %>%
+  select(staName) %>%
   mutate(x=tsne_out$Y[,1], y=tsne_out$Y[,2]) %>%
   ggplot() +
   geom_text(aes(x=x, y=y, label=staName), size=3) +
@@ -238,7 +301,7 @@ s1 <- -as.matrix(sta_d)
 ```
 
 ```{r}
-res <- apcluster(s1, q=0.1)
+res <- apcluster(s1)
 ```
 
 ```{r}
@@ -258,9 +321,34 @@ for (i in seq(length(res@clusters))) {
 
 ```{r}
 sta_inf %>%
+  select(staName) %>%
   mutate(x=tsne_out$Y[,1], y=tsne_out$Y[,2]) %>%
   mutate(cl=factor(sta.cl)) %>%
   ggplot() +
   geom_text(aes(x=x, y=y, label=staName, color=cl), size=3) +
-  coord_fixed()
+  scale_x_continuous(limits=c(min(tsne_out$Y[,1])-1, max(tsne_out$Y[,1])+1)) +
+  scale_y_continuous(limits=c(min(tsne_out$Y[,2])-1, max(tsne_out$Y[,2])+1)) +
+  scale_color_brewer(palette = "Dark2") +
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.line = element_line(color="grey"))
+```
+
+```{r}
+exemplars <- sta_inf %>%
+  slice(res@exemplars) %>%
+  pull(staName)
+
+df1 %>%
+  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  filter(staName %in% exemplars) %>%
+  group_by(staName, trnOpDateW) %>%
+  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  ungroup() %>%
+  gather(key=variable, value=value, -staName, -trnOpDateW) %>%
+  group_by(staName) %>%
+  mutate(value=value/sum(value)) %>%
+  ggplot() +
+  geom_col(aes(x=trnOpDateW, y=value)) +
+  facet_grid(staName~variable)
 ```
