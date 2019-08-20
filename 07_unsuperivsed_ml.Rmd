@@ -115,6 +115,7 @@ df %>%
   ggplot() +
   geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
   scale_y_continuous(limits=c(0, 90000), breaks=seq(0, 90000, 10000)) +
+  labs(x="日期", y="進出站人數", color="進出") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey20"),
         panel.grid.major = element_line(color="grey90"))
@@ -130,6 +131,7 @@ df %>%
   ggplot() +
   geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
   scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
+  labs(x="日期", y="進出站人數", color="進出") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey20"),
         panel.grid.major = element_line(color="grey90"))
@@ -148,6 +150,7 @@ df %>%
   ggplot() +
   geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
   scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
+  labs(x="日期", y="進出站人數", color="進出") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey20"),
         panel.grid.major = element_line(color="grey90"))
@@ -183,7 +186,7 @@ df1 <- df %>%
 
 站點資料特徵便是用來一組描述站點特性的資料。
 
-根據前面的折線圖，我們可以觀察到進出站人數具有週期性變化的情形，而其週期大約是一週(一星期)。所以可能可以以一週為單位，彙整資料，避免雜訊(某一天突然增加或減少的異常值)。檢視汐科站在一週每天的進出人數分布範圍
+根據前面的折線圖，我們可以觀察到進出站人數具有週期性變化的情形，而其週期大約是一週(一星期)。所以可能可以以一週為單位，彙整資料，避免雜訊(某一天突然增加或減少的異常值)。檢視汐科站在一週每天的進出人數分布範圍。
 ```{r}
 df1 %>%
   filter(staName=="汐科") %>%
@@ -193,10 +196,13 @@ df1 %>%
   ggplot() +
   geom_boxplot(aes(x=Var, y=Count)) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
-  facet_wrap(~trnOpDateW, nrow=2)
+  labs(x="", y="進出人數") +
+  facet_wrap(~trnOpDateW, nrow=2) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey"))
 ```
 
-再檢視臺東站在一週每天的進出人數分布範圍
+再檢視臺東站在一週每天的進出人數分布範圍。
 ```{r}
 df1 %>%
   filter(staName=="臺東") %>%
@@ -206,10 +212,13 @@ df1 %>%
   ggplot() +
   geom_boxplot(aes(x=Var, y=Count)) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
-  facet_wrap(~trnOpDateW, nrow=2)
+  labs(x="", y="進出人數") +
+  facet_wrap(~trnOpDateW, nrow=2) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey"))
 ```
 
-最後，檢視臺北站在一週每天的進出人數分布範圍
+最後，檢視臺北站在一週每天的進出人數分布範圍。
 ```{r}
 df1 %>%
   filter(staName=="臺北") %>%
@@ -219,18 +228,21 @@ df1 %>%
   ggplot() +
   geom_boxplot(aes(x=Var, y=Count)) +
   scale_y_continuous(limits=c(0, 90000), breaks=seq(0, 90000, 10000)) +
-  facet_wrap(~trnOpDateW, nrow=2)
+  labs(x="", y="進出人數") +
+  facet_wrap(~trnOpDateW, nrow=2) +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey"))
 ```
 
 注意週日和週五、週六與平日的情形，汐科站平日進出站人數多於週日和週六，每天的進出站人數大致相同；臺東站的週五和週六出站多於進站，週日則相反；臺北站的週五和週六則是進站多於出站；且臺北和臺東的週末進出人數都多於週間平日。
 
-首以長條圖顯示上述的進出站人數變化現象，。
+首先，計算每個站點在一週中每天的進出站人數平均值(刪除前後各5%的極端值以避免極端值的影響)。接著以長條圖顯示上述的進出站人數變化現象，。
 
 ```{r}
 df1 %>%
   mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
   group_by(staName, trnOpDateW) %>%
-  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  summarise(In=mean(gateInComingCnt, trim=0.05), Out=mean(gateOutGoingCnt, trim=0.05)) %>%
   ungroup() %>%
   gather(key=variable, value=value, -staName, -trnOpDateW) %>%
   group_by(staName) %>%
@@ -238,18 +250,22 @@ df1 %>%
   filter(staName %in% c("汐科", "臺北", "臺東")) %>%
   ggplot() +
   geom_col(aes(x=trnOpDateW, y=value, fill=variable), position="dodge") +
+  scale_fill_brewer(palette="Dark2") +
+  labs(x="週", y="人數佔全週進出人數比例", fill="進出") +
   facet_wrap(~staName, nrow=3) +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey"),
         panel.grid.major = element_line(color="grey"))
 ```
 
+從長條圖的示意可以觀察到產生的特徵保留上述分析的特性
+
 以下的研究即利用這個觀察到的現象將資料分群。首先產生每一個站點的資料特徵。
 ```{r}
 sta_inf <- df1 %>%
   mutate(trnOpDateW=wday(trnOpDate, locale="English", label=TRUE)) %>%
   group_by(staName, trnOpDateW) %>%
-  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  summarise(In=mean(gateInComingCnt, trim=0.05), Out=mean(gateOutGoingCnt, trim=0.05)) %>%
   ungroup() %>%
   gather(key=variable, value=value, -staName, -trnOpDateW) %>%
   group_by(staName) %>%
@@ -264,20 +280,31 @@ sta_inf <- df1 %>%
 summary(sta_inf)
 ```
 
-取出各站點的特徵
+取出各站點的特徵(第2到最後一個variable)，形成特徵矩陣，用來計算站點間的相似性，也就是估計矩陣的列(row)與列是否相似。
+
 ```{r}
 sta_inf.mat <- as.matrix(sta_inf[,2:ncol(sta_inf)])
 ```
 
-## 維度縮減
+### 維度縮減
 
+上面產生的特徵共有14個維度(dimensions)，也就是14個variables。在計算站點間的相似性之前，可以先看看是否可以用比較少的維度，便達到相近的計算結果。這個從高維度轉換成低維度的運算稱為**維度縮減 (dimension reduction)**，是資料探勘中相當重要的步驟。許多研究對於維度縮減提出相當多不同的方法，在此我們選用**主成分分析 (principal component analysis, pca)**。
+
+將資料特徵輸入R語言的主成分分析函數`prcomp()`。
 ```{r}
 sta_inf.pca <- prcomp(sta_inf.mat)
 ```
 
+主成分分析產生的結果為一組與原先相同維度的矩陣，以上例而言，其結果在`sta_inf.pca$x`。經過主成分分析後，第一個維度的特徵(稱為PC1)是最重要的資料描述方式，其次是最二個維度的特徵(PC2)，依序下來為PC3、PC4、...。
+
+查看主成分分析產生結果的解釋
 ```{r}
 summary(sta_inf.pca)
 ```
+。其中的Standard deviation是只用這個維度上的特徵的標準差，可以利用標準差計算變異數所佔的比例(Proportion of Varience)，以第一個維度(PC1)來說，標準差是0.03016
+，經過計算後，變異數所佔的比例為0.84913，也就是只用第一個維度的特徵便可以表現0.84913的訊息，因此第一個維度是最重要的資料描述方式。第二個維度的變異數所佔的比例為0.070720，比第一個維度小，但比其他維度大，所以在資料描述方式上，它是第二重要的。以下依此類推。並且前三個維度(PC1、PC2和PC3)的變異數比例累積(Cumulative Proportion)為0.957170，也就是說只使用這三個維度便可以表現整個資料訊息的0.957170。所以，以下的分析將使用前三個維度。
+
+將各個維度的變異數比例累積畫成圖形來看。
 
 ```{r}
 data.frame(dim_order=seq(1, ncol(sta_inf.mat)),
@@ -289,38 +316,39 @@ data.frame(dim_order=seq(1, ncol(sta_inf.mat)),
   geom_point() +
   scale_x_continuous(limits=c(1, ncol(sta_inf.mat)), breaks=seq(1, ncol(sta_inf.mat), 1), minor_breaks = NULL) +
   scale_y_continuous(limits=c(0, 1), breaks=seq(0, 1, 0.1)) +
+  labs(x="維度", y="累積變異數比例") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="gray"),
         panel.grid.major = element_line(color="gray70"),
         panel.grid.minor = element_line(color="gray90"))
 ```
 
-取出經過
+取出經過前三個維度的資料。
 
 ```{r}
 sta_inf.pf <- sta_inf.pca$x[, 1:3]
 ```
 
-## 將站點依據彼此距離視覺化
+### 將站點依據彼此距離視覺化
 
-本節中將依據站點彼此間的距離，將各站點映射到圖形上，使距離較近的站點在圖形上的距離也較近
+本節中將依據站點彼此間的相似性，將各站點映射到圖形上，使相似性較大的站點在圖形上的距離較近
 
 載入映射演算法套件
-```{r}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(Rtsne)
 ```
 
-計算站點之間的距離
+計算站點之間的距離(相似性可以視為距離的負值，相似性愈大，距離愈小)。`dist()`提供矩陣的每列之間各種距離的計算方式，這裡我們採用內定而且是最常用的Euclidean distance(歐基里得距離)。
 ```{r}
 sta_d <- dist(sta_inf.pf)
 ```
 
-依據站點之間的距離計算站點映射在圖形上的位置
+依據站點特徵之間的歐基里得距離計算站點映射在圖形上的位置
 ```{r}
-tsne_out <- Rtsne(sta_d, perplexity=5, theta=0.0, is_distance=TRUE)
+tsne_out <- Rtsne(sta_d, perplexity=10, theta=0.0, is_distance=TRUE)
 ```
 
-將站點加上映射的坐標
+將站點加上映射的坐標後，依據其坐標畫成圖形
 ```{r}
 sta_inf %>%
   select(staName) %>%
@@ -330,13 +358,14 @@ sta_inf %>%
   coord_fixed()
 ```
 
-## 站點分群
+### 站點集群
 
-載入分群演算法套件
-```{r}
+載入Affinity Propagation集群演算法套件
+```{r results='hide', message=FALSE, warning=FALSE}
 library(apcluster)
 ```
 
+AP集群演算法需要
 ```{r}
 s1 <- -as.matrix(sta_d)
 ```
