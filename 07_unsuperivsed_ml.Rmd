@@ -115,6 +115,7 @@ df %>%
   ggplot() +
   geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
   scale_y_continuous(limits=c(0, 90000), breaks=seq(0, 90000, 10000)) +
+  scale_color_brewer(palette="Dark2", labels=c("進站", "出站")) +
   labs(x="日期", y="進出站人數", color="進出") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey20"),
@@ -131,6 +132,7 @@ df %>%
   ggplot() +
   geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
   scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
+  scale_color_brewer(palette="Dark2", labels=c("進站", "出站")) +
   labs(x="日期", y="進出站人數", color="進出") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey20"),
@@ -150,6 +152,7 @@ df %>%
   ggplot() +
   geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
   scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
+  scale_color_brewer(palette="Dark2", labels=c("進站", "出站")) +
   labs(x="日期", y="進出站人數", color="進出") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey20"),
@@ -195,6 +198,7 @@ df1 %>%
   mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
   ggplot() +
   geom_boxplot(aes(x=Var, y=Count)) +
+  scale_x_discrete(labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
   labs(x="", y="進出人數") +
   facet_wrap(~trnOpDateW, nrow=2) +
@@ -211,6 +215,7 @@ df1 %>%
   mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
   ggplot() +
   geom_boxplot(aes(x=Var, y=Count)) +
+  scale_x_discrete(labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
   labs(x="", y="進出人數") +
   facet_wrap(~trnOpDateW, nrow=2) +
@@ -227,6 +232,7 @@ df1 %>%
   mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
   ggplot() +
   geom_boxplot(aes(x=Var, y=Count)) +
+  scale_x_discrete(labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 90000), breaks=seq(0, 90000, 10000)) +
   labs(x="", y="進出人數") +
   facet_wrap(~trnOpDateW, nrow=2) +
@@ -250,7 +256,7 @@ df1 %>%
   filter(staName %in% c("汐科", "臺北", "臺東")) %>%
   ggplot() +
   geom_col(aes(x=trnOpDateW, y=value, fill=variable), position="dodge") +
-  scale_fill_brewer(palette="Dark2") +
+  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
   labs(x="週", y="人數佔全週進出人數比例", fill="進出") +
   facet_wrap(~staName, nrow=3) +
   theme(panel.background = element_blank(),
@@ -348,14 +354,20 @@ sta_d <- dist(sta_inf.pf)
 tsne_out <- Rtsne(sta_d, perplexity=10, theta=0.0, is_distance=TRUE)
 ```
 
-將站點加上映射的坐標後，依據其坐標畫成圖形
+tsne對每個資料產生它在圖形上的映射位置，其結果放在一個行數為2的矩陣Y上，每一列分別代表分別表示一個資料在圖形上的坐標。例如：前五個站點在圖形上的坐標為
+```{r}
+tsne_out$Y[1:5,]
+```
+
+將每個站點加上它映射的坐標後，依據其坐標畫成圖形
 ```{r}
 sta_inf %>%
   select(staName) %>%
   mutate(x=tsne_out$Y[,1], y=tsne_out$Y[,2]) %>%
   ggplot() +
   geom_text(aes(x=x, y=y, label=staName), size=3) +
-  coord_fixed()
+  labs(x="", y="") +
+  theme(panel.background = element_blank())
 ```
 
 ### 站點集群
@@ -365,15 +377,22 @@ sta_inf %>%
 library(apcluster)
 ```
 
-AP集群演算法需要
+AP集群演算法的輸入是資料項目間的相似性，所以我們利用前面計算得到的站點間的距離乘上-1，做為站點間的相似性。
 ```{r}
-s1 <- -as.matrix(sta_d)
+s1 <- -1*as.matrix(sta_d)
 ```
 
+將站點間的相似性輸入AP集群演算法
 ```{r}
 res <- apcluster(s1)
 ```
 
+顯示集群分析的結果。Number of clusters是集群數量，Clusters是每個集群的成員，Exemplars是每個集群的核心成員。
+```{r}
+show(res)
+```
+
+查看每個集群內的站點
 ```{r}
 for (i in seq(length(res@clusters))) {
   print(paste("Cluster", i))
@@ -382,43 +401,48 @@ for (i in seq(length(res@clusters))) {
 
 ```
 
-```{r}
-sta.cl <- integer(nrow(sta_inf))
-for (i in seq(length(res@clusters))) {
-  sta.cl[res@clusters[[i]]] <- i
-}
-```
-
+將站點映射到相對應的坐標上，並以顏色區分它們的集群。
 ```{r}
 sta_inf %>%
   select(staName) %>%
   mutate(x=tsne_out$Y[,1], y=tsne_out$Y[,2]) %>%
-  mutate(cl=factor(sta.cl)) %>%
+  mutate(cl=factor(labels(res, type="enum"))) %>%
   ggplot() +
   geom_text(aes(x=x, y=y, label=staName, color=cl), size=3) +
   scale_x_continuous(limits=c(min(tsne_out$Y[,1])-1, max(tsne_out$Y[,1])+1)) +
   scale_y_continuous(limits=c(min(tsne_out$Y[,2])-1, max(tsne_out$Y[,2])+1)) +
   scale_color_brewer(palette = "Dark2") +
+  labs(x="", y="") +
   theme(panel.background = element_blank(),
         legend.position = "none",
         axis.line = element_line(color="grey"))
 ```
 
-```{r}
-exemplars <- sta_inf %>%
-  slice(res@exemplars) %>%
-  pull(staName)
+### 結果的解釋
 
+集群的核心成員
+```{r}
+sta_inf$staName[res@exemplars]
+```
+
+```{r}
 df1 %>%
-  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
-  filter(staName %in% exemplars) %>%
+  filter(staName %in% sta_inf$staName[res@exemplars]) %>%
+  mutate(trnOpDateW=wday(trnOpDate, locale="English", label=TRUE)) %>%
   group_by(staName, trnOpDateW) %>%
-  summarise(In=mean(gateInComingCnt), Out=mean(gateOutGoingCnt)) %>%
+  summarise(In=mean(gateInComingCnt, trim=0.05), Out=mean(gateOutGoingCnt, trim=0.05)) %>%
   ungroup() %>%
-  gather(key=variable, value=value, -staName, -trnOpDateW) %>%
+  gather(key=IO, value=value, -staName, -trnOpDateW) %>%
   group_by(staName) %>%
   mutate(value=value/sum(value)) %>%
+  ungroup() %>%
   ggplot() +
-  geom_col(aes(x=trnOpDateW, y=value)) +
-  facet_grid(staName~variable)
+  geom_col(aes(x=trnOpDateW, y=value, fill=IO), position="dodge") +
+  labs(x="", y="人數比例", fill="進出") +
+  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
+  facet_wrap(~staName) +
+  theme(panel.background = element_blank(),
+        legend.position = "bottom")
 ```
+
+以下請分析各個集群表現的特色。建議：可以先從最右邊的集群開始分析
