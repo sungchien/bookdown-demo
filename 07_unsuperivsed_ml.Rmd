@@ -1,4 +1,4 @@
-# 利用R語言進行非監督式機器學習 {#exploratory_data_analysis}
+# 利用R語言進行非監督式機器學習 {#unsupervised_machine_learning}
 
 ## 課程簡介 {-}
 

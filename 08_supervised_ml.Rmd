@@ -1,0 +1,50 @@
+# 利用R語言進行監督式機器學習 {#supervised_machine_learning}
+
+## 課程簡介 {-}
+
+### 課程簡介 {-}
+
+
+### 學習目標 {-}
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+library(jsonlite)
+```
+
+[TMDB 5000 Movie Dataset](https://www.kaggle.com/tmdb/tmdb-movie-metadata/downloads/tmdb-5000-movie-dataset.zip/2)
+```{r message=FALSE, warning=FALSE}
+movies <- read_csv("tmdb_5000_movies.csv")
+```
+
+```{r}
+summary(movies)
+```
+
+[Project Report: IMDB 5000 Movie Dataset] (http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)
+```{r}
+genresExtract <- function (y) {
+  x<- fromJSON(y)
+  paste(x$name, collapse="%")
+}
+```
+
+```{r}
+movies$genres_data <- sapply(movies$genres, genresExtract)
+```
+
+```{r}
+movies_genres <- movies %>%
+  select(id, genres_data) %>%
+  mutate(genres_data=gsub(" ", "_", genres_data)) %>%
+  mutate(genres_data=strsplit(genres_data, split="%")) %>%
+  unnest(genres_data) %>%
+  mutate(value=1) %>%
+  spread(key=genres_data, value=value, fill=0)
+```
+
+```{r}
+movies <- movies %>%
+  left_join(movies_genres)
+```
+
