@@ -9,7 +9,6 @@
 
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(tidyverse)
-library(jsonlite)
 ```
 
 [TMDB 5000 Movie Dataset](https://www.kaggle.com/tmdb/tmdb-movie-metadata/downloads/tmdb-5000-movie-dataset.zip/2)
@@ -22,13 +21,55 @@ summary(movies)
 ```
 
 [Project Report: IMDB 5000 Movie Dataset] (http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)
+
+從第一個variable `budget`開始分析，首先看有多少筆電影的`budget`為0
+```{r}
+print(paste("budget為0的電影數量：", nrow(movies[movies$budget==0,])))
+```
+
+將`budget`為0的電影從資料中移除，留下大於0者
+```{r}
+movies <- movies %>%
+  filter(budget>0)
+```
+
+接著分析genres，有多少電影的genres為空白(blank)
+```{r}
+print(paste("genres為空白的電影數量：", nrow(movies[movies$genres=="",])))
+```
+
+查看前五筆電影的genres資料
+```{r}
+movies$genres[1:5]
+```
+
+每一筆電影的genres資料都是JSON格式
+
+載入處理JSON的套件
+```{r}
+library(jsonlite)
+```
+
+讀取第一筆電影的genres資料
+```{r}
+fromJSON(movies$genres[1])
+```
+
+寫一個函數來取得電影所有的genre資料
 ```{r}
 genresExtract <- function (y) {
   x<- fromJSON(y)
-  paste(x$name, collapse="%")
+  g <- paste(x$name, collapse="%")
+  gsub(" ", "_", g)
 }
 ```
 
+處理第一筆電影的genres資料
+```{r}
+genresExtract(movies$genres[1])
+```
+
+處理所有電影的genres資料
 ```{r}
 movies$genres_data <- sapply(movies$genres, genresExtract)
 ```
@@ -36,15 +77,248 @@ movies$genres_data <- sapply(movies$genres, genresExtract)
 ```{r}
 movies_genres <- movies %>%
   select(id, genres_data) %>%
-  mutate(genres_data=gsub(" ", "_", genres_data)) %>%
   mutate(genres_data=strsplit(genres_data, split="%")) %>%
   unnest(genres_data) %>%
-  mutate(value=1) %>%
+  mutate(value=1)
+```
+
+```{r}
+movies_genres %>%
+  group_by(genres_data) %>%
+  summarise(count=sum(value)) %>%
+  ggplot() +
+  geom_col(aes(x=reorder(genres_data, count), y=count)) +
+  coord_flip() +
+  scale_y_continuous(limits=c(0, 1800), breaks=seq(0, 1800, 300)) +
+  labs(x="類型", y="電影數") +
+  theme(panel.background = element_blank(),
+        panel.grid.major.x = element_line(color="grey"),
+        axis.line =  element_line(color="grey"))
+```
+
+少於10部電影的genres
+```{r}
+movies_genres %>%
+  group_by(genres_data) %>%
+  summarise(count=sum(value)) %>%
+  filter(count<10)
+```
+
+刪去Foreign和TV_Movie的資料，然後將movies_genres從long form轉成wide form
+```{r}
+movies_genres <- movies_genres %>%
+  filter(!(genres_data %in% c("Foreign", "TV_Movie"))) %>%
   spread(key=genres_data, value=value, fill=0)
+```
+
+理論上來說，兩個data frame 的 Observation數目應當相同。以下找出兩個data frame Observation數目不同的原因。
+```{r}
+movies$genres[movies$id %in% setdiff(movies$id, movies_genres$id)]
+```
+
+刪去genres資料為"[]"的電影，合併兩個data frame，捨棄genres和genres_data兩個variables
+```{r}
+movies <- movies %>%
+  filter(genres!="[]") %>%
+  left_join(movies_genres) %>%
+  select(-genres, -genres_data)
+```
+
+電影的homepage URL在這個分析中不會用到，所以捨棄這個variable
+```{r}
+movies <- movies %>%
+  select(-homepage)
+```
+
+取出電影的keywords，然後捨棄這個variable
+```{r}
+movies_keywords <- movies %>%
+  select(id, keywords)
+
+movies <- movies %>%
+  select(-keywords)
+```
+
+分析original_language
+```{r}
+movies %>%
+  group_by(original_language) %>%
+  summarise(count=n()) %>%
+  mutate(proportion=count/sum(count))
+```
+
+可以發現大部分是英語片(95%)，因此將這個variable轉成是否為英語片(is_en)
+```{r}
+movies <- movies %>%
+  mutate(is_en=ifelse(original_language=="en", 1, 0)) %>%
+  select(-original_language)
+```
+
+捨棄original_title和overview兩個variables
+```{r}
+movies <- movies %>%
+  select(-original_title, -overview)
+```
+
+分析popularity
+```{r}
+summary(movies$popularity)
+```
+有3/4的電影popularity在34以下
+
+分析production_companies
+```{r}
+movies$production_companies[1:5]
+```
+也是JSON的編碼，所以嘗試以genres用過的方法分析
+
+```{r}
+PCExtract <- function(y) {
+  x<- fromJSON(y)
+  g <- paste(x$name, collapse="%")
+  gsub(" ", "_", g)
+}
+
+movies$pc_data <- sapply(movies$production_companies, PCExtract)
+```
+
+```{r}
+movies_pc <- movies %>%
+  select(id, pc_data) %>%
+  mutate(pc_data=strsplit(pc_data, split="%")) %>%
+  unnest(pc_data) %>%
+  mutate(value=1)
+```
+
+電影製作公司與他們製作的電影數 (按電影數排名)
+```{r}
+production_companies <- movies_pc %>%
+  group_by(pc_data) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+```
+
+製作電影數前100的電影製作公司
+```{r}
+top100pc <- production_companies$pc_data[1:100]
+```
+
+電影的製作公司包含幾家前100製作公司
+```{r}
+movies_pc <- movies_pc %>%
+  mutate(value=ifelse(pc_data %in% top100pc, 1, 0)) %>%
+  group_by(id) %>%
+  summarise(top_pc_number=sum(value))
 ```
 
 ```{r}
 movies <- movies %>%
-  left_join(movies_genres)
+  left_join(movies_pc) %>%
+  mutate(top_pc_number=ifelse(is.na(top_pc_number), 0, top_pc_number)) %>%
+  select(-production_companies, -pc_data)
 ```
 
+捨棄production_countries
+```{r}
+movies <- movies %>%
+  select(-production_countries)
+```
+
+分析release_date，因為其資料型態是Date，所以載入日期時間處理套件
+```{r}
+library(lubridate)
+```
+
+查看每年的上映電影數
+```{r}
+movies %>%
+  mutate(release_year=year(release_date)) %>%
+  group_by(release_year) %>%
+  summarise(count=n()) %>%
+  ggplot() +
+  geom_line(aes(x=release_year, y=count)) +
+  scale_x_continuous(limits=c(1910, 2020), breaks=seq(1910, 2020, 10)) +
+  labs(x="放映年份", y="電影數量") +
+  theme(panel.background = element_blank(),
+        panel.grid.major.y = element_line(color="grey70"),
+        axis.line = element_line(color="grey"))
+```
+
+以放映年份取代放映日期
+```{r}
+movies <- movies %>%
+  mutate(release_year=year(release_date)) %>%
+  select(-release_date)
+```
+
+分析revenue
+```{r}
+summary(movies$revenue)
+```
+
+查看revenue為0的資料
+```{r}
+movies[movies$revenue==0, ]
+```
+
+刪除revenue為0的資料
+```{r}
+movies <- movies %>%
+  filter(revenue>0)
+```
+
+分析runtime
+```{r}
+summary(movies$runtime)
+```
+
+捨棄spoken_languages
+```{r}
+movies <- movies %>%
+  select(-spoken_languages)
+```
+
+分析status
+```{r}
+movies %>%
+  group_by(status) %>%
+  summarise(count=n())
+```
+
+捨棄status
+```{r}
+movies <- movies %>%
+  select(-status)
+```
+
+分析vote_average
+```{r}
+summary(movies$vote_average)
+```
+
+有多少電影的vote_average為0
+```{r}
+nrow(movies[movies$vote_average==0, ])
+```
+
+刪除vote_average為0的電影
+```{r}
+movies <- movies %>%
+  filter(vote_average>0)
+```
+
+分析vote_count
+```{r}
+summary(movies$vote_count)
+```
+
+有多少電影的vote_count小於10
+```{r}
+nrow(movies[movies$vote_count<10, ])
+```
+
+刪除vote_count小於10的電影
+```{r}
+movies <- movies %>%
+  filter(vote_count>=10)
+```
