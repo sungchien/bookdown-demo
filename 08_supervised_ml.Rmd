@@ -22,17 +22,155 @@ summary(movies)
 
 [Project Report: IMDB 5000 Movie Dataset] (http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)
 
-從第一個variable `budget`開始分析，首先看有多少筆電影的`budget`為0
-```{r}
-print(paste("budget為0的電影數量：", nrow(movies[movies$budget==0,])))
-```
+## 資料整理
+整理各個variable，分為以下四類
 
-將`budget`為0的電影從資料中移除，留下大於0者
+1. id
+2. 與本次分析無關者：homepage, original_title, overview, production_countries, spoken_languages, status, tagline, title
+3. 數值資料類型：budget, popularity, revenue, runtime, vote_average, vote_count
+4. 日期資料類型：release_date
+5. 簡單字串資料類型：original_language
+6. 複雜字串資料類型：genres, keywords, production_companies
+
+### 與本次分析無關者
+
+與本次分析無關的variable，不需進一步分析，可以捨棄。
+
 ```{r}
 movies <- movies %>%
-  filter(budget>0)
+  select(-homepage, -original_title, -overview, -production_countries, -spoken_languages, -status, -tagline, -title)
 ```
 
+從20個variables，轉換為12個variables
+
+### 數值資料類型
+
+觀察每個數值資料的範圍
+```{r}
+movies %>%
+  select(budget, popularity, revenue, runtime, vote_average, vote_count) %>%
+  summary()
+```
+
+`budget`(預算)、`revenue`(收入)、`runtime`(放映時間)、`vote_count`(投票人數)等為0並不合理，首先刪除這些資料為0者
+```{r}
+movies <- movies %>%
+  filter(budget>0 & revenue>0 & runtime>0 & vote_count>0)
+```
+
+再觀察每個數值資料的範圍
+```{r}
+movies %>%
+  select(budget, popularity, revenue, runtime, vote_average, vote_count) %>%
+  summary()
+```
+
+`budget`最小為1 ，看起來仍然不合理。顯示`budget`少於1000的電影共幾筆？
+```{r}
+print(paste("budget少於1000的電影數量：", nrow(movies[movies$budget<1000,])))
+```
+
+刪除`budget`少於1000的電影
+```{r}
+movies <- movies %>%
+  filter(budget>=1000)
+```
+
+收入太少，也不正常，顯示`revenue`少於1000的電影共幾筆？
+```{r}
+print(paste("revenue少於1000的電影數量：", nrow(movies[movies$revenue<1000,])))
+```
+
+再刪除`revenue`少於1000的電影
+```{r}
+movies <- movies %>%
+  filter(revenue>=1000)
+```
+
+分析`runtime`的分布情形
+```{r}
+summary(movies$runtime)
+```
+似乎OK.
+
+分析`vote_average`
+```{r}
+summary(movies$vote_average)
+```
+也還可以。
+
+最後分析`vote_count`，投票人數太少，資料較不準確，顯示`vote_count`少於100的電影共幾筆？
+```{r}
+print(paste("vote_count少於100的電影數量：", nrow(movies[movies$vote_count<100,])))
+```
+
+再刪除`vote_count`少於100的電影
+```{r}
+movies <- movies %>%
+  filter(vote_count>=100)
+```
+
+再觀察每個數值資料的範圍
+```{r}
+movies %>%
+  select(budget, popularity, revenue, runtime, vote_average, vote_count) %>%
+  summary()
+```
+
+### 日期資料類型
+分析`release_date`，因為其資料型態是`Date`，所以載入日期時間處理套件
+```{r  results='hide', message=FALSE, warning=FALSE}
+library(lubridate)
+```
+
+觀察`release_date`的分布情形
+```{r}
+summary(movies$release_date)
+```
+從1927年到2016年，最早期的電影數較少
+
+查看每年的上映電影數
+```{r}
+movies %>%
+  mutate(release_year=year(release_date)) %>%
+  group_by(release_year) %>%
+  summarise(count=n()) %>%
+  ggplot() +
+  geom_line(aes(x=release_year, y=count)) +
+  scale_x_continuous(limits=c(1910, 2020), breaks=seq(1910, 2020, 10)) +
+  labs(x="放映年份", y="電影數量") +
+  theme(panel.background = element_blank(),
+        panel.grid.major.y = element_line(color="grey70"),
+        axis.line = element_line(color="grey"))
+```
+
+以放映年份取代放映日期，便於之後的分析
+```{r}
+movies <- movies %>%
+  mutate(release_year=year(release_date)) %>%
+  select(-release_date)
+```
+
+### 簡單字串類型
+簡單字串資料類型與複雜資料的差別是前者的資料格式較單純，簡單字串資料類型只有一個variable：`original_language`。
+
+分析`original_language`
+```{r}
+movies %>%
+  group_by(original_language) %>%
+  summarise(count=n()) %>%
+  mutate(proportion=count/sum(count)) %>%
+  arrange(desc(proportion))
+```
+
+可以發現雖然`original_language`中有許多可能的值，也就是收錄許多語言的電影，但絕大部分是英語片(96.64%)，因此將這個variable轉成是否為英語片(is_en)
+```{r}
+movies <- movies %>%
+  mutate(is_en=ifelse(original_language=="en", 1, 0)) %>%
+  select(-original_language)
+```
+
+### 複雜字串資料類型
 接著分析genres，有多少電影的genres為空白(blank)
 ```{r}
 print(paste("genres為空白的電影數量：", nrow(movies[movies$genres=="",])))
@@ -124,12 +262,6 @@ movies <- movies %>%
   select(-genres, -genres_data)
 ```
 
-電影的homepage URL在這個分析中不會用到，所以捨棄這個variable
-```{r}
-movies <- movies %>%
-  select(-homepage)
-```
-
 取出電影的keywords，然後捨棄這個variable
 ```{r}
 movies_keywords <- movies %>%
@@ -138,33 +270,6 @@ movies_keywords <- movies %>%
 movies <- movies %>%
   select(-keywords)
 ```
-
-分析original_language
-```{r}
-movies %>%
-  group_by(original_language) %>%
-  summarise(count=n()) %>%
-  mutate(proportion=count/sum(count))
-```
-
-可以發現大部分是英語片(95%)，因此將這個variable轉成是否為英語片(is_en)
-```{r}
-movies <- movies %>%
-  mutate(is_en=ifelse(original_language=="en", 1, 0)) %>%
-  select(-original_language)
-```
-
-捨棄original_title和overview兩個variables
-```{r}
-movies <- movies %>%
-  select(-original_title, -overview)
-```
-
-分析popularity
-```{r}
-summary(movies$popularity)
-```
-有3/4的電影popularity在34以下
 
 分析production_companies
 ```{r}
@@ -216,109 +321,4 @@ movies <- movies %>%
   left_join(movies_pc) %>%
   mutate(top_pc_number=ifelse(is.na(top_pc_number), 0, top_pc_number)) %>%
   select(-production_companies, -pc_data)
-```
-
-捨棄production_countries
-```{r}
-movies <- movies %>%
-  select(-production_countries)
-```
-
-分析release_date，因為其資料型態是Date，所以載入日期時間處理套件
-```{r}
-library(lubridate)
-```
-
-查看每年的上映電影數
-```{r}
-movies %>%
-  mutate(release_year=year(release_date)) %>%
-  group_by(release_year) %>%
-  summarise(count=n()) %>%
-  ggplot() +
-  geom_line(aes(x=release_year, y=count)) +
-  scale_x_continuous(limits=c(1910, 2020), breaks=seq(1910, 2020, 10)) +
-  labs(x="放映年份", y="電影數量") +
-  theme(panel.background = element_blank(),
-        panel.grid.major.y = element_line(color="grey70"),
-        axis.line = element_line(color="grey"))
-```
-
-以放映年份取代放映日期
-```{r}
-movies <- movies %>%
-  mutate(release_year=year(release_date)) %>%
-  select(-release_date)
-```
-
-分析revenue
-```{r}
-summary(movies$revenue)
-```
-
-查看revenue為0的資料
-```{r}
-movies[movies$revenue==0, ]
-```
-
-刪除revenue為0的資料
-```{r}
-movies <- movies %>%
-  filter(revenue>0)
-```
-
-分析runtime
-```{r}
-summary(movies$runtime)
-```
-
-捨棄spoken_languages
-```{r}
-movies <- movies %>%
-  select(-spoken_languages)
-```
-
-分析status
-```{r}
-movies %>%
-  group_by(status) %>%
-  summarise(count=n())
-```
-
-捨棄status
-```{r}
-movies <- movies %>%
-  select(-status)
-```
-
-分析vote_average
-```{r}
-summary(movies$vote_average)
-```
-
-有多少電影的vote_average為0
-```{r}
-nrow(movies[movies$vote_average==0, ])
-```
-
-刪除vote_average為0的電影
-```{r}
-movies <- movies %>%
-  filter(vote_average>0)
-```
-
-分析vote_count
-```{r}
-summary(movies$vote_count)
-```
-
-有多少電影的vote_count小於10
-```{r}
-nrow(movies[movies$vote_count<10, ])
-```
-
-刪除vote_count小於10的電影
-```{r}
-movies <- movies %>%
-  filter(vote_count>=10)
 ```
