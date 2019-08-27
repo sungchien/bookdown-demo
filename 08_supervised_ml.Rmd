@@ -171,8 +171,13 @@ movies <- movies %>%
 ```
 
 ### 複雜字串資料類型
-IMDB 5000 Movie Dataset中，為了可以表示多個可能的值，`genres`(電影類型)、`keywords`(關鍵詞)和`production_companies`製作公司都是屬於較複雜的字串資料類型，而且都是以JSON的方式表示這些值。因此，為了表示這些值，首先載入JSON的處理套件`jsonlite`。
+IMDB 5000 Movie Dataset中，為了可以表示多個可能的值，`genres`(電影類型)、`keywords`(關鍵詞)和`production_companies`製作公司都是屬於較複雜的字串資料類型，而且都是以JSON的方式表示這些值。例如
 
+```{r}
+movies$genres[1]
+```
+
+因此，為了表示這些值，首先載入JSON的處理套件`jsonlite`。
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(jsonlite)
 ```
@@ -231,8 +236,7 @@ movies <- movies %>%
   select(-genres, -genres_data)
 ```
 
-依據同樣方式分析電影的keywords，找出共有多少個keywords，Keywords的電影數量分布範圍為何
-
+依據同樣方式分析電影的keywords，找出共有多少個keywords，keywords的電影數量分布範圍為何
 ```{r}
 movies$keywords_data <- sapply(movies$keywords, valueExtract)
 ```
@@ -272,28 +276,24 @@ movies_keywords <- movies_keywords %>%
   spread(key=keywords_data, value=value, fill=0)
 ```
 
+合併兩個data frame，捨棄keywords和keywords_data兩個variables，並且將keywords相關variables的`NA`值改為0。
 ```{r}
-movies <- movies %>%
-  left_join(movies_keywords) %>%
-  select(-keywords, -keywords_data)
-```
-
-分析production_companies
-```{r}
-movies$production_companies[1:5]
-```
-也是JSON的編碼，所以嘗試以genres用過的方法分析
-
-```{r}
-PCExtract <- function(y) {
-  x<- fromJSON(y)
-  g <- paste(x$name, collapse="%")
-  gsub(" ", "_", g)
+na2zero <- function (x) {
+  ifelse(is.na(x), 0, x)
 }
 
-movies$pc_data <- sapply(movies$production_companies, PCExtract)
+movies <- movies %>%
+  left_join(movies_keywords) %>%
+  select(-keywords, -keywords_data) %>%
+  mutate_at(vars(matches("k_")), na2zero)
 ```
 
+分析`production_companies`
+```{r}
+movies$pc_data <- sapply(movies$production_companies, valueExtract)
+```
+
+將電影的每一個`production_companies`展開
 ```{r}
 movies_pc <- movies %>%
   select(id, pc_data) %>%
@@ -302,7 +302,7 @@ movies_pc <- movies %>%
   mutate(value=1)
 ```
 
-電影製作公司與他們製作的電影數 (按電影數排名)
+統計電影製作公司與他們製作的電影數 (按電影數排名)
 ```{r}
 production_companies <- movies_pc %>%
   group_by(pc_data) %>%
@@ -312,7 +312,9 @@ production_companies <- movies_pc %>%
 
 製作電影數前100的電影製作公司
 ```{r}
-top100pc <- production_companies$pc_data[1:100]
+top100pc <- production_companies %>%
+  slice(1:100) %>%
+  pull(pc_data)
 ```
 
 電影的製作公司包含幾家前100製作公司
@@ -323,9 +325,148 @@ movies_pc <- movies_pc %>%
   summarise(top_pc_number=sum(value))
 ```
 
+將電影的製作公司包含前100製作公司的數量與movies合併，捨棄production_companies和pc_data兩個variables，並且將top_pc_number的`NA`值改為0。
 ```{r}
 movies <- movies %>%
   left_join(movies_pc) %>%
-  mutate(top_pc_number=ifelse(is.na(top_pc_number), 0, top_pc_number)) %>%
-  select(-production_companies, -pc_data)
+  select(-production_companies, -pc_data) %>%
+  mutate(top_pc_number=ifelse(is.na(top_pc_number), 0, top_pc_number))
 ```
+
+### 完成資料整理
+
+在進行資料探勘前，最後再檢視一次movies
+```{r}
+summary(movies)
+```
+
+### 準備預測目標
+
+預測的目標variable為`vote_average`
+```{r}
+movies %>%
+  ggplot() +
+  geom_histogram(aes(x=vote_average), breaks=seq(0, 10, 1)) +
+  scale_x_continuous(breaks=seq(0, 10, 1), minor_breaks = NULL)
+```
+
+將`vote_average`分為x<=5, 5<x<=6, 6<x<=7以及7<x等四個區間
+
+```{r}
+movies <- movies %>%
+  mutate(vote_average_p=cut(vote_average, breaks=c(0, 5, 6, 7, 10)))
+```
+
+檢視資料區間結果
+```{r}
+movies %>%
+  select(vote_average, vote_average_p) %>%
+  slice(1:10)
+```
+
+### 切分訓練與測試資料
+
+```{r}
+sd <- round(second(Sys.time())*100)
+
+set.seed(sd)
+permuted_id <- sample(movies$id, nrow(movies))
+
+folds <- 5
+test_iter <- 1
+
+test_set <- movies %>%
+  filter(id %in% permuted_id[seq(test_iter, nrow(movies), folds)])
+
+train_set <- movies %>%
+  filter(!(id %in% permuted_id[seq(test_iter, nrow(movies), folds)]))
+```
+
+## 進行分類樹監督式學習
+
+載入分類樹及相關繪圖套件
+```{r results='hide', message=FALSE, warning=FALSE}
+library(rpart)
+library(rpart.plot)
+```
+
+利用train_set的資料訓練分類樹
+```{r}
+class.tree <- rpart(vote_average_p ~ . -vote_average -id,
+                    data = train_set, method = "class",
+                    minsplit=30, cp=0.00001, xval=5)
+```
+
+```{r}
+printcp(class.tree)
+```
+
+```{r}
+min(class.tree$cptable[, "xerror"])
+```
+
+```{r}
+which.min(class.tree$cptable[, "xerror"])
+```
+
+```{r}
+class.tree$cptable[which.min(class.tree$cptable[, "xerror"]), "CP"]
+```
+
+```{r}
+pruned.tree <- prune(class.tree,
+                     cp = class.tree$cptable[which.min(class.tree$cptable[,"xerror"]),"CP"])
+```
+
+```{r}
+train_res <- predict(pruned.tree, train_set, type = "class")
+```
+
+```{r}
+library(caret)
+library(e1071)
+```
+
+```{r}
+confusionMatrix(train_res, train_set$vote_average_p)
+```
+
+```{r}
+test_res <- predict(pruned.tree, test_set, type = "class")
+```
+
+```{r}
+confusionMatrix(test_res, test_set$vote_average_p)
+```
+
+## 進行隨機森林監督式學習
+
+載入隨機森林套件
+```{r}
+library(randomForest)
+```
+
+```{r}
+rf <- randomForest(vote_average_p ~ . -vote_average -id, data = train_set)
+```
+
+```{r}
+importance <- importance(rf)
+data.frame(variable=dimnames(importance)[[1]],
+           MeanDecreaseGini=importance,
+           stringsAsFactors = FALSE) %>%
+  arrange(desc(MeanDecreaseGini)) %>%
+  slice(1:10) %>%
+  ggplot() +
+  geom_col(aes(x=reorder(variable, MeanDecreaseGini), y=MeanDecreaseGini)) +
+  coord_flip()
+```
+
+```{r}
+rf_res <- predict(rf, test_set)
+```
+
+```{r}
+confusionMatrix(rf_res, test_set$vote_average_p)
+```
+
