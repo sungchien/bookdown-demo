@@ -119,7 +119,7 @@ movies %>%
 
 ### 日期資料類型
 分析`release_date`，因為其資料型態是`Date`，所以載入日期時間處理套件
-```{r  results='hide', message=FALSE, warning=FALSE}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(lubridate)
 ```
 
@@ -171,47 +171,27 @@ movies <- movies %>%
 ```
 
 ### 複雜字串資料類型
-接著分析genres，有多少電影的genres為空白(blank)
-```{r}
-print(paste("genres為空白的電影數量：", nrow(movies[movies$genres=="",])))
-```
+IMDB 5000 Movie Dataset中，為了可以表示多個可能的值，`genres`(電影類型)、`keywords`(關鍵詞)和`production_companies`製作公司都是屬於較複雜的字串資料類型，而且都是以JSON的方式表示這些值。因此，為了表示這些值，首先載入JSON的處理套件`jsonlite`。
 
-查看前五筆電影的genres資料
-```{r}
-movies$genres[1:5]
-```
-
-每一筆電影的genres資料都是JSON格式
-
-載入處理JSON的套件
-```{r}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(jsonlite)
 ```
 
-讀取第一筆電影的genres資料
+並且撰寫一個函數來取得這些variable上所有的資料
 ```{r}
-fromJSON(movies$genres[1])
-```
-
-寫一個函數來取得電影所有的genre資料
-```{r}
-genresExtract <- function (y) {
+valueExtract <- function (y) {
   x<- fromJSON(y)
   g <- paste(x$name, collapse="%")
   gsub(" ", "_", g)
 }
 ```
 
-處理第一筆電影的genres資料
+首先處理所有電影的genres資料
 ```{r}
-genresExtract(movies$genres[1])
+movies$genres_data <- sapply(movies$genres, valueExtract)
 ```
 
-處理所有電影的genres資料
-```{r}
-movies$genres_data <- sapply(movies$genres, genresExtract)
-```
-
+將電影的每一個genre展開
 ```{r}
 movies_genres <- movies %>%
   select(id, genres_data) %>%
@@ -220,6 +200,7 @@ movies_genres <- movies %>%
   mutate(value=1)
 ```
 
+統計每一個genre出現的電影數，並繪製成圖形
 ```{r}
 movies_genres %>%
   group_by(genres_data) %>%
@@ -233,42 +214,68 @@ movies_genres %>%
         panel.grid.major.x = element_line(color="grey"),
         axis.line =  element_line(color="grey"))
 ```
+最多為Drama、Comedy、Thriller和Action，最少者如Western和Documentary。
 
-少於10部電影的genres
-```{r}
-movies_genres %>%
-  group_by(genres_data) %>%
-  summarise(count=sum(value)) %>%
-  filter(count<10)
-```
 
-刪去Foreign和TV_Movie的資料，然後將movies_genres從long form轉成wide form
+將movies_genres從long format轉成wide format
 ```{r}
 movies_genres <- movies_genres %>%
-  filter(!(genres_data %in% c("Foreign", "TV_Movie"))) %>%
+  mutate(genres_data=paste0("g_", genres_data)) %>%
   spread(key=genres_data, value=value, fill=0)
 ```
 
-理論上來說，兩個data frame 的 Observation數目應當相同。以下找出兩個data frame Observation數目不同的原因。
-```{r}
-movies$genres[movies$id %in% setdiff(movies$id, movies_genres$id)]
-```
-
-刪去genres資料為"[]"的電影，合併兩個data frame，捨棄genres和genres_data兩個variables
+合併兩個data frame，捨棄genres和genres_data兩個variables
 ```{r}
 movies <- movies %>%
-  filter(genres!="[]") %>%
   left_join(movies_genres) %>%
   select(-genres, -genres_data)
 ```
 
-取出電影的keywords，然後捨棄這個variable
+依據同樣方式分析電影的keywords，找出共有多少個keywords，Keywords的電影數量分布範圍為何
+
+```{r}
+movies$keywords_data <- sapply(movies$keywords, valueExtract)
+```
+
+將電影的每一個keywords展開
 ```{r}
 movies_keywords <- movies %>%
-  select(id, keywords)
+  select(id, keywords_data) %>%
+  mutate(keywords_data=strsplit(keywords_data, split="%")) %>%
+  unnest(keywords_data) %>%
+  mutate(value=1)
+```
 
+統計每一個keywords出現的電影數，按照大小排列
+```{r}
+movies_keywords %>%
+  group_by(keywords_data) %>%
+  summarise(count=sum(value)) %>%
+  arrange(desc(count))
+```
+
+電影數量最多的前二十個關鍵詞
+```{r}
+top_keywords <- movies_keywords %>%
+  group_by(keywords_data) %>%
+  summarise(count=sum(value)) %>%
+  arrange(desc(count)) %>%
+  slice(1:20) %>%
+  pull(keywords_data)
+```
+
+取出包含前二十個關鍵詞的電影，並且轉成wide format
+```{r}
+movies_keywords <- movies_keywords %>%
+  filter(keywords_data %in% top_keywords) %>%
+  mutate(keywords_data=paste0("k_", keywords_data)) %>%
+  spread(key=keywords_data, value=value, fill=0)
+```
+
+```{r}
 movies <- movies %>%
-  select(-keywords)
+  left_join(movies_keywords) %>%
+  select(-keywords, -keywords_data)
 ```
 
 分析production_companies
