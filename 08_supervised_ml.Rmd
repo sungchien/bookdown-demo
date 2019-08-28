@@ -26,11 +26,11 @@ summary(movies)
 整理各個variable，分為以下四類
 
 1. id
-2. 與本次分析無關者：homepage, original_title, overview, production_countries, spoken_languages, status, tagline, title
+2. 與本次分析無關者：homepage, keywords, original_title, overview, production_countries, spoken_languages, status, tagline, title
 3. 數值資料類型：budget, popularity, revenue, runtime, vote_average, vote_count
 4. 日期資料類型：release_date
 5. 簡單字串資料類型：original_language
-6. 複雜字串資料類型：genres, keywords, production_companies
+6. 複雜字串資料類型：genres, production_companies
 
 ### 與本次分析無關者
 
@@ -38,10 +38,10 @@ summary(movies)
 
 ```{r}
 movies <- movies %>%
-  select(-homepage, -original_title, -overview, -production_countries, -spoken_languages, -status, -tagline, -title)
+  select(-homepage, -keywords, -original_title, -overview, -production_countries, -spoken_languages, -status, -tagline, -title)
 ```
 
-從20個variables，轉換為12個variables
+從20個variables，轉換為11個variables
 
 ### 數值資料類型
 
@@ -163,15 +163,14 @@ movies %>%
   arrange(desc(proportion))
 ```
 
-可以發現雖然`original_language`中有許多可能的值，也就是收錄許多語言的電影，但絕大部分是英語片(96.64%)，因此將這個variable轉成是否為英語片(is_en)
+可以發現雖然`original_language`中有許多可能的值，也就是收錄許多語言的電影，但絕大部分是英語片(96.64%)，因此捨棄這個variable
 ```{r}
 movies <- movies %>%
-  mutate(is_en=ifelse(original_language=="en", 1, 0)) %>%
   select(-original_language)
 ```
 
 ### 複雜字串資料類型
-IMDB 5000 Movie Dataset中，為了可以表示多個可能的值，`genres`(電影類型)、`keywords`(關鍵詞)和`production_companies`製作公司都是屬於較複雜的字串資料類型，而且都是以JSON的方式表示這些值。例如
+IMDB 5000 Movie Dataset中，為了可以表示多個可能的值，`genres`(電影類型)和`production_companies`製作公司都是屬於較複雜的字串資料類型，而且都是以JSON的方式表示這些值。例如
 
 ```{r}
 movies$genres[1]
@@ -236,58 +235,6 @@ movies <- movies %>%
   select(-genres, -genres_data)
 ```
 
-依據同樣方式分析電影的keywords，找出共有多少個keywords，keywords的電影數量分布範圍為何
-```{r}
-movies$keywords_data <- sapply(movies$keywords, valueExtract)
-```
-
-將電影的每一個keywords展開
-```{r}
-movies_keywords <- movies %>%
-  select(id, keywords_data) %>%
-  mutate(keywords_data=strsplit(keywords_data, split="%")) %>%
-  unnest(keywords_data) %>%
-  mutate(value=1)
-```
-
-統計每一個keywords出現的電影數，按照大小排列
-```{r}
-movies_keywords %>%
-  group_by(keywords_data) %>%
-  summarise(count=sum(value)) %>%
-  arrange(desc(count))
-```
-
-電影數量最多的前二十個關鍵詞
-```{r}
-top_keywords <- movies_keywords %>%
-  group_by(keywords_data) %>%
-  summarise(count=sum(value)) %>%
-  arrange(desc(count)) %>%
-  slice(1:20) %>%
-  pull(keywords_data)
-```
-
-取出包含前二十個關鍵詞的電影，並且轉成wide format
-```{r}
-movies_keywords <- movies_keywords %>%
-  filter(keywords_data %in% top_keywords) %>%
-  mutate(keywords_data=paste0("k_", keywords_data)) %>%
-  spread(key=keywords_data, value=value, fill=0)
-```
-
-合併兩個data frame，捨棄keywords和keywords_data兩個variables，並且將keywords相關variables的`NA`值改為0。
-```{r}
-na2zero <- function (x) {
-  ifelse(is.na(x), 0, x)
-}
-
-movies <- movies %>%
-  left_join(movies_keywords) %>%
-  select(-keywords, -keywords_data) %>%
-  mutate_at(vars(matches("k_")), na2zero)
-```
-
 分析`production_companies`
 ```{r}
 movies$pc_data <- sapply(movies$production_companies, valueExtract)
@@ -333,13 +280,6 @@ movies <- movies %>%
   mutate(top_pc_number=ifelse(is.na(top_pc_number), 0, top_pc_number))
 ```
 
-### 完成資料整理
-
-在進行資料探勘前，最後再檢視一次movies
-```{r}
-summary(movies)
-```
-
 ### 準備預測目標
 
 預測的目標variable為`vote_average`
@@ -347,7 +287,11 @@ summary(movies)
 movies %>%
   ggplot() +
   geom_histogram(aes(x=vote_average), breaks=seq(0, 10, 1)) +
-  scale_x_continuous(breaks=seq(0, 10, 1), minor_breaks = NULL)
+  scale_x_continuous(breaks=seq(0, 10, 1), minor_breaks = NULL) +
+  labs(x="vote_average區間", y="電影數量") +
+  theme(panel.background = element_blank(),
+        axis.line=element_line(color="grey"),
+        panel.grid.major.y = element_line(color="grey90"))
 ```
 
 將`vote_average`分為x<=5, 5<x<=6, 6<x<=7以及7<x等四個區間
@@ -364,23 +308,34 @@ movies %>%
   slice(1:10)
 ```
 
+### 完成資料整理
+
+在進行資料探勘前，最後再檢視一次movies
+```{r}
+summary(movies)
+```
+
 ### 切分訓練與測試資料
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(caret)
+```
 
 ```{r}
 sd <- round(second(Sys.time())*100)
 
 set.seed(sd)
-permuted_id <- sample(movies$id, nrow(movies))
 
-folds <- 5
-test_iter <- 1
+# Step 1: Get row numbers for the training data
+trainRowNumbers <- createDataPartition(movies$vote_average_p, p=0.8, list=FALSE)
 
-test_set <- movies %>%
-  filter(id %in% permuted_id[seq(test_iter, nrow(movies), folds)])
+# Step 2: Create the training  dataset
+train_set <- movies[trainRowNumbers,]
 
-train_set <- movies %>%
-  filter(!(id %in% permuted_id[seq(test_iter, nrow(movies), folds)]))
+# Step 3: Create the test dataset
+test_set <- movies[-trainRowNumbers,]
 ```
+
 
 ## 進行分類樹監督式學習
 
@@ -422,10 +377,6 @@ pruned.tree <- prune(class.tree,
 train_res <- predict(pruned.tree, train_set, type = "class")
 ```
 
-```{r}
-library(caret)
-library(e1071)
-```
 
 ```{r}
 confusionMatrix(train_res, train_set$vote_average_p)
@@ -469,4 +420,5 @@ rf_res <- predict(rf, test_set)
 ```{r}
 confusionMatrix(rf_res, test_set$vote_average_p)
 ```
+
 
