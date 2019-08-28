@@ -299,7 +299,7 @@ movies %>%
 ```{r}
 movies <- movies %>%
   mutate(vote_average_p=cut(vote_average, breaks=c(0, 5, 6, 7, 10))) %>%
-  select(-vote_average)
+  select(-vote_average, -vote_count)
 ```
 
 檢視資料區間內資料的數量
