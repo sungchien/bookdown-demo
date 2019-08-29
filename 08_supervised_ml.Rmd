@@ -7,41 +7,58 @@
 
 ### 學習目標 {-}
 
+## 監督式機器學習
+
+監督式機器學習 (supervised machine learning)是利用一組已經標注結果的資料，預測尚未標注結果的新資料的可能結果。以數學的方式來表示這個概念，監督式機器學習利用一組資料 $X_{1}, X_{2}, ..., X_{N}$ 以及其對應的結果 $Y_{1}, Y_{2}, ..., Y_{N}$ ，設法找到一個模型 $f(x)$ ，盡可能使 $f(X_{1}) = Y_{1}$ 、 $f(X_{2}) = Y_{2}$ 、...、 $f(X_{N}) = Y_{N}$ 。當有新的資料 $\hat{X}$ 進入時，可以利用 $f(x)$ 計算的結果 $f(\hat{X})$ ，做為可能結果的預測。
+
+通常來說，如果要預測的結果是連續的數值，通常將這類的問題稱為**迴歸 (regression)**，如果是離散型的結果的話，則稱為**分類 (classification)**。
+
+分類的問題可以視為運用現有的資料 $X_{1}, X_{2}, ..., X_{N}$ 以及其對應的類別 $Y_{1}, Y_{2}, ..., Y_{N}$ ，嘗試找到一個分類器模型 $f(x)$ 來預測新資料 $\hat{X}$ 的類別 $f(\hat{X})$ 。
+
+## TMDB電影評分預測
+
+TMDB資料是[Kaggle](https://www.kaggle.com/)提供做為學習資料科學的資料集。Kaggle利用[TMDB (The Movie Database)](https://www.themoviedb.org/?language=zh-TW)提供的電影資料建立的資料集，大約有5000筆電影資料，在Kaggle上的下載點為[TMDB 5000 Movie Dataset](https://www.kaggle.com/tmdb/tmdb-movie-metadata/downloads/tmdb-5000-movie-dataset.zip/2)。
+
+本次課程將利用TMDB資料集說明如何應用電影資料(片長、類型、製作公司、預算、收入、...等)，進行監督式機器學習，預測電影評分。可參考[Project Report: IMDB 5000 Movie Dataset](http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)，有類似的做法。
+
+### 讀入資料
+
+載入`tidyverse`套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(tidyverse)
 ```
 
-[TMDB 5000 Movie Dataset](https://www.kaggle.com/tmdb/tmdb-movie-metadata/downloads/tmdb-5000-movie-dataset.zip/2)
+讀取TMDB資料集
 ```{r message=FALSE, warning=FALSE}
 movies <- read_csv("tmdb_5000_movies.csv")
 ```
 
+讀入資料後，先看目前的情況。
 ```{r}
 summary(movies)
 ```
 
-[Project Report: IMDB 5000 Movie Dataset] (http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)
 
-## 資料整理
+## 資料整理與探索性資料分析
+
 整理各個variable，分為以下四類
 
-1. id
+1. 電影編號：id
 2. 與本次分析無關者：homepage, keywords, original_title, overview, production_countries, spoken_languages, status, tagline, title
 3. 數值資料類型：budget, popularity, revenue, runtime, vote_average, vote_count
 4. 日期資料類型：release_date
 5. 簡單字串資料類型：original_language
 6. 複雜字串資料類型：genres, production_companies
 
-### 與本次分析無關者
+### 處理與本次分析無關的variables
 
-與本次分析無關的variable，不需進一步分析，可以捨棄。
-
+與本次分析無關的variables，不需進一步分析，可以直接捨棄。
 ```{r}
 movies <- movies %>%
   select(-homepage, -keywords, -original_title, -overview, -production_countries, -spoken_languages, -status, -tagline, -title)
 ```
 
-從20個variables，轉換為11個variables
+捨棄這些variables後，資料集從20個variables，轉換為11個variables。
 
 ### 數值資料類型
 
@@ -91,15 +108,27 @@ movies <- movies %>%
 ```{r}
 summary(movies$runtime)
 ```
-似乎OK.
 
-分析`vote_average`
+畫成直方圖看看
 ```{r}
-summary(movies$vote_average)
+movies %>%
+  ggplot() +
+  geom_histogram(aes(x=runtime), breaks=seq(0, 360, 30)) +
+  scale_x_continuous(breaks=seq(0, 360, 30), minor_breaks = NULL) +
+  labs(y="電影數量") +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey"),
+        panel.grid.major.y = element_line(color="grey90"))
 ```
-也還可以。
 
-最後分析`vote_count`，投票人數太少，資料較不準確，顯示`vote_count`少於100的電影共幾筆？
+刪除runtime小於60分鐘的電影
+```{r}
+movies <- movies %>%
+  filter(runtime>=60)
+```
+
+
+最後分析`vote_count`，由於我們希望預測電影的評分資料，如果評分人數太少，評分可能較不準確。顯示`vote_count`少於100的電影共幾筆？
 ```{r}
 print(paste("vote_count少於100的電影數量：", nrow(movies[movies$vote_count<100,])))
 ```
@@ -110,11 +139,44 @@ movies <- movies %>%
   filter(vote_count>=100)
 ```
 
-再觀察每個數值資料的範圍
+我們要預測的目標是平均評分`vote_average`，檢視這個variable的分布情形。
 ```{r}
 movies %>%
-  select(budget, popularity, revenue, runtime, vote_average, vote_count) %>%
-  summary()
+  ggplot() +
+  geom_histogram(aes(x=vote_average), breaks=seq(0, 10, 0.5)) +
+  scale_x_continuous(breaks=seq(0, 10, 0.5), minor_breaks = NULL) +
+  labs(x="vote_average區間", y="電影數量") +
+  theme(panel.background = element_blank(),
+        axis.line=element_line(color="grey"),
+        panel.grid.major.y = element_line(color="grey90"),
+        axis.text.x = element_text(angle=60, hjust=1))
+```
+
+從上面的圖形可以發現資料分布在2.5到8.5之間
+根據`vote_average`的分布情形，決定將這個variable分為x<=5.5, 5.5<x<=6.5, 6.5<x<=7.5以及7.5<x等四個區間，將`vote_average`改為新的變數`vote_average_p`，做為接下來預測的目標。也就是以其他的variables來預測`vote_average_p`在哪一個區間(類別)。
+
+```{r}
+movies <- movies %>%
+  mutate(vote_average_p=cut(vote_average, breaks=c(0, 5.5, 6.5, 7.5, 10)))
+```
+
+檢視各類別內的資料數量
+```{r}
+movies %>%
+  group_by(vote_average_p) %>%
+  summarise(count=n()) %>%
+  ggplot() +
+  geom_col(aes(x=vote_average_p, y=count)) +
+  labs(x="vote_average_p類別", y="電影數量") +
+  theme(panel.background = element_blank(),
+        axis.line=element_line(color="grey"),
+        panel.grid.major.y = element_line(color="grey90"))
+```
+
+捨棄`vote_count`和`vote_average`兩個variables
+```{r}
+movies <- movies %>%
+  select(-vote_count, -vote_average)
 ```
 
 ### 日期資料類型
@@ -144,10 +206,29 @@ movies %>%
         axis.line = element_line(color="grey"))
 ```
 
-以放映年份取代放映日期，便於之後的分析
+以放映年份取代放映日期，並分為1990年前、1991-2000年、2001-2010年與2011年後等四個區間，便於之後的分析
 ```{r}
 movies <- movies %>%
   mutate(release_year=year(release_date)) %>%
+  mutate(release_year=cut(release_year, breaks=c(1900, 1990, 2000, 2010, 2020), labels=c("1990年前", "1991-2000年", "2001-2010年", "2011年後")))
+```
+
+檢視各類別內的資料數量
+```{r}
+movies %>%
+  group_by(release_year) %>%
+  summarise(count=n()) %>%
+  ggplot() +
+  geom_col(aes(x=release_year, y=count)) +
+  labs(x="出品年代", y="電影數量") +
+  theme(panel.background = element_blank(),
+        axis.line=element_line(color="grey"),
+        panel.grid.major.y = element_line(color="grey90"))
+```
+
+捨棄`release_date`
+```{r}
+ movies <- movies %>%
   select(-release_date)
 ```
 
@@ -280,39 +361,19 @@ movies <- movies %>%
   mutate(top_pc_number=ifelse(is.na(top_pc_number), 0, top_pc_number))
 ```
 
-### 準備預測目標
-
-預測的目標variable為`vote_average`，檢視這個variable的分布情形。
+繪製電影的知名製作公司數量分布情形
 ```{r}
 movies %>%
-  ggplot() +
-  geom_histogram(aes(x=vote_average), breaks=seq(0, 10, 1)) +
-  scale_x_continuous(breaks=seq(0, 10, 1), minor_breaks = NULL) +
-  labs(x="vote_average區間", y="電影數量") +
-  theme(panel.background = element_blank(),
-        axis.line=element_line(color="grey"),
-        panel.grid.major.y = element_line(color="grey90"))
-```
-
-根據`vote_average`的分布情形，決定將這個variable分為x<=5, 5<x<=6, 6<x<=7以及7<x等四個區間，將`vote_average`改為新的變數`vote_average_p`，做為接下來預測的目標。也就是以其他的variables來預測`vote_average_p`在哪一個區間(分類)。
-
-```{r}
-movies <- movies %>%
-  mutate(vote_average_p=cut(vote_average, breaks=c(0, 5, 6, 7, 10))) %>%
-  select(-vote_average, -vote_count)
-```
-
-檢視資料區間內資料的數量
-```{r}
-movies %>%
-  group_by(vote_average_p) %>%
+  mutate(top_pc_number=factor(top_pc_number)) %>%
+  group_by(top_pc_number) %>%
   summarise(count=n()) %>%
   ggplot() +
-  geom_col(aes(x=vote_average_p, y=count)) +
-  labs(x="vote_average_p區間", y="電影數量") +
+  geom_col(aes(x=top_pc_number, y=count)) +
+  labs(x="包含知名製作公司數", y="電影數量") +
   theme(panel.background = element_blank(),
-        axis.line=element_line(color="grey"),
-        panel.grid.major.y = element_line(color="grey90"))
+        panel.grid.major.y = element_line(color="grey90"),
+        axis.line =  element_line(color="grey"))
+
 ```
 
 ### 完成資料整理
@@ -328,15 +389,14 @@ movies <- movies %>%
   select(-id)
 ```
 
-## 監督式機器學習常用的測試套件
+## 建立訓練資料與測試資料
 
 載入套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(caret)
 ```
 
-### 切分訓練與測試資料
-
+將TMDB電影資料分為訓練集與測試集，訓練資料用來訓練各種分類器，測試資料比較各種分類器的成效。
 ```{r}
 sd <- round(second(Sys.time())*100)
 
@@ -352,18 +412,46 @@ train_set <- movies[trainRowNumbers,]
 test_set <- movies[-trainRowNumbers,]
 ```
 
-
 ## 進行分類樹監督式學習
+
+### 利用caret套件的rpart方法進行分類樹監督式學習
+
+`caret`套件提供一套試驗模式，透過這種模式可以選擇各種分類器。首先我們建立一個是用於各種方法的設定，調整每種分類器的參數，使得分類器可以有較好的結果。
+```{r}
+tr_control <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 10,
+                           search = 'random')
+```
+
+使用`rpart`方法，訓練分類樹
+```{r}
+mod_rpart <- train(vote_average_p ~ .,
+                   method = "rpart",
+                   data = train_set,
+                   tuneLength = 10, 
+                   metric = "Accuracy",
+                   trControl = tr_control)
+```
+
+以訓練好的分類模型進行測試資料(test_set)分類的成效，Confusion Matrix表示各類別的資料被分到其他類別的情形，Accuracy是分類的準確性。
+```{r}
+test_res <- predict(mod_rpart, test_set)
+
+confusionMatrix(test_res, test_set$vote_average_p)
+```
+
 
 ### 利用rpart套件進行分類樹監督式學習
 
-載入分類樹及相關繪圖套件
+除了利用`caret`套件訓練分類器以外，還可以使用各分類器原生的套件，例如rpart分類器的原生套件便是`rpart`。
+
+載入分類樹套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(rpart)
-library(rpart.plot)
 ```
 
-利用train_set的資料訓練分類樹
+輸入train_set的資料訓練分類樹
 ```{r}
 class.tree <- rpart(vote_average_p ~ .,
                     data = train_set, method = "class",
@@ -398,13 +486,6 @@ pruned.tree <- prune(class.tree,
                      cp = class.tree$cptable[which.min(class.tree$cptable[,"xerror"]),"CP"])
 ```
 
-以訓練好的分類樹模型進行訓練資料(train_set)分類的成效
-```{r}
-train_res <- predict(pruned.tree, train_set, type = "class")
-
-confusionMatrix(train_res, train_set$vote_average_p)
-```
-
 以訓練好的分類模型進行測試資料(test_set)分類的成效
 ```{r}
 test_res <- predict(pruned.tree, test_set, type = "class")
@@ -412,58 +493,17 @@ test_res <- predict(pruned.tree, test_set, type = "class")
 confusionMatrix(test_res, test_set$vote_average_p)
 ```
 
-由於模型是由訓練資料內的模式產生，一般來說，訓練資料的分類成效會比測試資料來得好。
-
-### 利用caret套件的rpart方法進行分類樹監督式學習
-
-```{r}
-mod_rpart <- train(vote_average_p ~ .,
-                   method = "rpart",
-                   data = train_set,
-                   tuneLength = 10, 
-                   metric = "Accuracy",
-                   trControl = trainControl(method = "repeatedcv",
-                                            number = 3,
-                                            repeats = 10,
-                                            search = 'random'))
-```
-
-以訓練好的分類模型進行訓練資料(train_set)分類的成效
-```{r}
-train_res <- predict(mod_rpart, train_set)
-
-confusionMatrix(train_res, train_set$vote_average_p)
-```
-
-以訓練好的分類模型進行測試資料(test_set)分類的成效
-```{r}
-test_res <- predict(mod_rpart, test_set)
-
-confusionMatrix(test_res, test_set$vote_average_p)
-```
-
-兩種方法所得到的成效結果相當接近。
-
 ## 進行隨機森林監督式學習
 
-###
+### 利用caret套件的rf方法進行隨機森林監督式學習
+
 ```{r}
 mod_rf <- train(vote_average_p ~ .,
                 method = "rf",
                 data = train_set,
                 tuneLength = 10, 
                 metric = "Accuracy",
-                trControl = trainControl(method = "repeatedcv",
-                                         number = 3,
-                                         repeats = 10,
-                                         search = 'random'))
-```
-
-以訓練好的分類模型進行訓練資料(train_set)分類的成效
-```{r}
-train_res <- predict(mod_rf, train_set)
-
-confusionMatrix(train_res, train_set$vote_average_p)
+                trControl = tr_control)
 ```
 
 以訓練好的分類模型進行測試資料(test_set)分類的成效
@@ -473,10 +513,12 @@ test_res <- predict(mod_rf, test_set)
 confusionMatrix(test_res, test_set$vote_average_p)
 ```
 
-### 利用隨機森林套件randomForest進行監督式學習
+### 利用隨機森林套件randomForest進行監督式機器學習
+
+`caret`套件的rf方法的原生套件稱為randomForest，以下以randomForest進行監督式機器學習。
 
 載入隨機森林套件
-```{r}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(randomForest)
 ```
 
