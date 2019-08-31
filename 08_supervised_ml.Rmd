@@ -443,9 +443,26 @@ library(FNN)
 ```
 
 ```{r}
-train_res <- knn.cv(subset(train_set, select=-vote_average_p), cl=train_set$vote_average_p, k = 10)
-confusionMatrix(train_res, train_set$vote_average_p)
+test_k <- function (x) {
+  train_res <- knn.cv(subset(train_set, select=-vote_average_p),
+                      cl=train_set$vote_average_p, k = x)
+  acc <- confusionMatrix(train_res, train_set$vote_average_p)
+  return(acc$overall[1])
+}
 ```
+
+```{r}
+accu <- sapply(1:20, test_k)
+```
+
+```{r}
+knn_res <- knn(subset(train_set, select=-vote_average_p),
+               subset(test_set, select=-vote_average_p),
+               cl=train_set$vote_average_p, k=which.max(accu))
+confusionMatrix(knn_res, test_set$vote_average_p)$overall[1]
+```
+
+## 分類樹監督式學習
 
 ### 利用caret套件的rpart方法進行分類樹監督式機器學習
 
@@ -471,7 +488,7 @@ mod_rpart <- train(vote_average_p ~ .,
 ```{r}
 test_res <- predict(mod_rpart, test_set)
 
-confusionMatrix(test_res, test_set$vote_average_p)
+confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
 ```
 
 ### 利用rpart套件進行分類樹監督式學習
@@ -522,7 +539,7 @@ pruned.tree <- prune(rpart_model,
 ```{r}
 test_res <- predict(pruned.tree, test_set, type = "class")
 
-confusionMatrix(test_res, test_set$vote_average_p)
+confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
 ```
 
 ## 進行隨機森林監督式學習
@@ -573,7 +590,7 @@ data.frame(variable=dimnames(importance)[[1]],
 ```{r}
 rf_res <- predict(rf_model, test_set)
 
-confusionMatrix(rf_res, test_set$vote_average_p)
+confusionMatrix(rf_res, test_set$vote_average_p)$overall[1]
 ```
 
 ## 隨機梯度增強
@@ -609,7 +626,7 @@ gbm_res <- predict(gbm_model, test_set, n.trees=best_iter)
 
 gbm_res_labels <- as.factor(colnames(gbm_res)[apply(gbm_res, 1, which.max)])
 
-confusionMatrix(gbm_res_labels, test_set$vote_average_p)
+confusionMatrix(gbm_res_labels, test_set$vote_average_p)$overall[1]
 ```
 
 ## 類神經網路
@@ -626,6 +643,6 @@ nnet_res <- predict(nnet_model, test_set, type = 'class')
 ```
 
 ```{r}
-confusionMatrix(as.factor(nnet_res), test_set$vote_average_p)
+confusionMatrix(as.factor(nnet_res), test_set$vote_average_p)$overall[1]
 ```
 
