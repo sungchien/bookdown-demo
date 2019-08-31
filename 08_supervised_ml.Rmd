@@ -434,9 +434,20 @@ train_set[,ncol(train_set)] <- predict(preprocessParams_2, train_set[,ncol(train
 test_set[,ncol(train_set)] <- predict(preprocessParams_2, test_set[,ncol(train_set)])
 ```
 
-## 進行分類樹監督式學習
+## 進行KNN
+## 進行分類樹監督式機器學習
 
-### 利用caret套件的rpart方法進行分類樹監督式學習
+載入套件
+```{r results='hide', message=FALSE, warning=FALSE}
+library(FNN)
+```
+
+```{r}
+train_res <- knn.cv(subset(train_set, select=-vote_average_p), cl=train_set$vote_average_p, k = 10)
+confusionMatrix(train_res, train_set$vote_average_p)
+```
+
+### 利用caret套件的rpart方法進行分類樹監督式機器學習
 
 `caret`套件提供一套試驗模式，透過這種模式可以選擇各種分類器。首先我們建立一個是用於各種方法的設定，調整每種分類器的參數，使得分類器可以有較好的結果。
 ```{r}
