@@ -8,41 +8,59 @@
 - 主要目的在熟悉R語言的環境與基本用法
 - 重點在R語言的基本與特殊的資料型態
 
-### 學習目標
+### 學習目標 {-}
 
-- 能夠安裝R 語言的開發環境，包括核心程式以及整合開發環境(Integrated Development Environment, IDE)
-- 能夠運用IDE 的Console 撰寫R 語言的指令
+- 能夠安裝R 語言的開發環境，包括核心程式以及整合開發環境(Integrated Development Environment, IDE) RStudio
+- 能夠運用RStudio 撰寫R 語言的指令
 - 能夠區別R 語言的各種基本資料型態：integer、numeric、character、logic、factor
-- 能夠區別R 語言的各種進階資料型態：vector、matrix)、array、list、data frame
+- 能夠區別R 語言的各種進階資料型態：vector、matrix、array、list、data frame
 
 ## R語言的基本概念
 
 **R語言簡介**
 
-- R語言是一種自由的軟體程式語言
-- 可用於統計分析、資料探勘、資料視覺化
-    - 內建多種統計及資料分析功能
-    - 可透過套件(package)增強功能
+R語言是一種自由的軟體程式語言，可用於統計分析、資料探勘、資料視覺化。R語言本身便具有多種統計及資料分析功能，再加上許多統計學家與資料科學家的努力，撰寫了許多強大功能的套件(package)。使用者只要熟知R語言的語法、指令和套件，便能輕易完成許多於統計分析、資料探勘、資料視覺化的任務。
 
-**R語言的資源**
+**R語言的資源中心**
 
-- CRAN：下載R語言的執行檔、原始碼和說明文件，也收錄了各種套件
+CRAN (The Comprehensive R Archive Network) 是R語言的資源中心，使用者可以在這個網站中下載R語言的執行檔、原始碼和說明文件，CRAN也收錄了各種套件。
+
+``` {r echo=FALSE}
+knitr::include_graphics("image/cran.png")
+```
+
+請進行下面的步驟安裝R語言的核心程式：
+
 - 請連線到[CRAN](https://cran.r-project.org/)
 - 點選Download R for (Mac) OS X 或Download for Windows 連結，下載R語言的核心程式，進行安裝
 - 注意目前的版本(R語言常常會有新的版本釋出，若有需要可下載更新)
 
+安裝成功的R語言的核心程式
+
+```{r echo=FALSE}
+knitr::include_graphics("image/rcore.png")
+```
+
 **R的編寫介面**
 
-- R本身的介面不容易用於開發程式
-- RStudio：輔助R語言程式開發的IDE應用軟體
+R本身的介面不容易用於開發程式，因此R語言的愛好者，開發了許多整合開發環境(Integrated Development Environment, IDE)，其中RStudio是較著名的一個。
+
+```{r echo=FALSE}
+knitr::include_graphics("image/rstudio.png")
+```
+
+請進行下面的步驟安裝R語言的核心程式
+
 - 請連線到[RStudio](https://www.rstudio.com/)
 - 點選Products 下的RStudio 下載，安裝RStudio
 
-**RStudio介面**
-
-* 請開啟RStudio
-
 **Rstudio的儀表板**
+
+請開啟RStudio
+
+```{r echo=FALSE}
+knitr::include_graphics("image/rstudio_interface.png")
+```
 
 - Console：執行敘述，呈現敘述執行的結果 (左下)
 - Source：開發程式開發 (左上)
@@ -56,11 +74,19 @@ R語言的**運算式**由常數(constants)、變數(variables)、運算子(oper
 
 - 如果運算式相當簡單的話，可以在RStudio的Console上，直接執行運算。例如：請在RStudio的Console處輸入以下運算式：
 
+```{r echo=FALSE}
+knitr::include_graphics("image/eg1.png")
+```
+
 ``` {r}
 3*5
 ```
 
 - 如果運算式較複雜或是有需要重複運用，則建議寫成Script，並利用Script右上方的**Run**進行運算。例如：請在RStudio的Script處輸入以下運算式，並且點選Script右上方的Run：
+
+```{r echo=FALSE}
+knitr::include_graphics("image/eg2.png")
+```
 
 ``` {r}
 3*5
@@ -76,6 +102,10 @@ var <- 3*5
 
 上面的指定敘述裡， `<-`的意思是將右邊運算式(3*5)的結果指定給左邊的變數(var)儲存。執行完後，可以在右上的Environment，查看變數var儲存的數值
 
+```{r echo=FALSE}
+knitr::include_graphics("image/eg3.png")
+```
+
 **註解**
 
 在R語言裡，`#`後的文字被忽略。例如：在Console處輸入下面的敘述
@@ -84,6 +114,10 @@ var <- 3*5
 #var <- 4*6
 ```
 在右上的Environment，查看變數var儲存的數值。此時可以發現新的敘述並沒有覆蓋舊的指定敘述。
+
+```{r echo=FALSE}
+knitr::include_graphics("image/eg4.png")
+```
 
 **查詢與設定工作目錄**
 
@@ -112,6 +146,11 @@ getwd()
 
 ``` {r eval=FALSE}
 help(setwd)
+```
+
+
+```{r echo=FALSE}
+knitr::include_graphics("image/help_eg1.png")
 ```
 
 右下的Help 出現有關這個函數的解說
@@ -145,7 +184,7 @@ integer 與 numeric屬於數值資料型態。數值資料的運算有
     
 **練習**
 
-請在Console下輸入下面的敘述，分別查看c, d, ee，說明為何c, d, e 的數值為何不同？
+請在Console下輸入下面的敘述，分別查看c, d, e，說明為何c, d, e 的數值為何不同？
 
 ``` {r}
 a <- 5
@@ -180,7 +219,7 @@ character為文字資料型態。在Console上輸入下面指定敘述，並且�
 
 ``` {r}
 str1 <- "R"
-str2 <- "Langague"
+str2 <- "Language"
 ```
 
 常用的character函數有
@@ -196,7 +235,7 @@ str2 <- "Langague"
 ``` {r}
 nchar(str1)
 paste(str1, str2)
-substr(str1, 1, 4)
+substr(str2, 1, 4)
 ```
 
 ### 邏輯資料型態
@@ -229,7 +268,7 @@ gender <- factor(gender_data, labels=c("女", "男"))
 
 上面的例子中，依照數值資料的順序，1代表女生，2代表男生。
 
-設定2代表女生，1代表男生。
+如果要設定2代表女生，1代表男生，，可以用下面的方法：
 
 ```{r}
 gender <- factor(gender_data, labels=c("女", "男"), levels=c(2, 1))
@@ -254,6 +293,10 @@ strD <- c("ab", "df", "4d", "32", "bc")
 ```
 
 在右側的Environment上，觀察vector可以發現：`intD`為num[1:8]，而`strD`為chr[1:5]。num和chr分別表示numeric和character資料型態；[1:8]和 [1:5]則是vector的範圍。
+
+```{r echo=FALSE}
+knitr::include_graphics("image/vector_eg1.png")
+```
 
 vector 上的元素，可以按照其位置取得，甚至替換
 
@@ -315,7 +358,7 @@ order(intD)
 intD[order(intD)]
 ```
 
-如果要找出vector中的元素在由大到小順序中的位置，則可以在函數`order()`中，將`decreasing`參數設為TRUE。
+如果在函數`order()`中，將`decreasing`參數設為TRUE，則先將vector中的元素反轉，再找出其順序，以找出由大到小的位置。
 
 ``` {r}
 order(intD, decreasing=TRUE)
