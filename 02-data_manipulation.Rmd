@@ -47,8 +47,22 @@ getwd()
 ### 讀入空氣品質指標資料
 
 1. 進入[環境資源資料開放平臺](https://opendata.epa.gov.tw/)
-2. 查詢空氣品質指標
-3. 點選[空氣品質指標(AQI)](https://opendata.epa.gov.tw/Data/Contents/AQI/)
+
+```{r echo=FALSE}
+knitr::include_graphics("image/epa_opendata.png")
+```
+
+2. 將上面的網頁往下拉到大氣類的空氣品質指標
+
+```{r echo=FALSE}
+knitr::include_graphics("image/epa_aqi_search.png")
+```
+
+3. 進入[空氣品質指標(AQI)](https://opendata.epa.gov.tw/Data/Contents/AQI/)
+
+```{r echo=FALSE}
+knitr::include_graphics("image/epa_aqi_data.png")
+```
 
 環境資源資料開放平臺提供三種資料科學最常見的資料格式
 
@@ -58,10 +72,22 @@ getwd()
 
 **CSV**是Comma Separated Values的縮寫。它是一種利用逗點(,)分隔每個Variable的資料檔案格式。在CSV檔案裡，除了第一列為資料名稱之外，其他列為Observation。
 
+```{r echo=FALSE}
+knitr::include_graphics("image/csv.png")
+```
+
 **XML**是eXtensible Markup Language
 的縮寫。XML將資料表示成xml元素的集合，例如<DATA><AQI>32</AQI><CO>0.26</CO></DATA>。在CSV檔案裡，每一個元素由**標籤(tag)**構成，例如<AQI>32</AQI>，前面的標籤稱為開始標籤，後面的則稱為結束標籤，以前面的例子來說，開始標籤是<AQI>，結束標籤則是</AQI>。標籤裡是資料名稱，開始標籤與結束標籤之間便是資料值。
 
+```{r echo=FALSE}
+knitr::include_graphics("image/xml.png")
+```
+
 **JSON**代表JavaScript Object Notation，也就是以JavaScript物件(object)的方式表示資料的檔案格式，例如：{"AQI":"32", "CO":"0.26"}。其中的AQI為資料名稱，32為資料值。
+
+```{r echo=FALSE}
+knitr::include_graphics("image/json.png")
+```
 
 在本次課程中，先以CSV格式讀取空氣品質指標檔案，未來可利用R語言的套件直接讀取XML和JSON格式資料。
 
@@ -103,6 +129,10 @@ df <- read.csv(file="http://opendata.epa.gov.tw/webapi/Data/REWIQA/?$orderby=Sit
 View(df)
 ```
 
+```{r echo=FALSE}
+knitr::include_graphics("image/aqi_df.png")
+```
+
 若是資料數量太多，可以先檢視頭尾幾筆資料。
 
 - `head(x, n)`：檢視data frame x的前n筆資料，`n`預設為6
@@ -135,21 +165,22 @@ str(df)
 
 最後，利用`summary(x)`檢視上各行(欄位)的資料分布情形
 
+```{r eval=FALSE}
+summary(df)
+```
+
 - 若是Variable的資料型態為integer或numeric，會呈現最小值、第一四分位數、中位數、平均數、第三四分位數、最大值等
 - 若是Variable的資料型態為character，只會呈現它的型態
 - 資料中是否有NA(non-available)？
 
 **注意**：原本檔案中如果有遺漏的資料時，讀入資料後會以NA方式呈現，檢查資料摘要時需要特別留意。
 
-```{r eval=FALSE}
-summary(df)
-```
-
 ## 資料整理
 
 ### 去除AQI為NA的資料紀錄
 
-先利用`is.na()`查看AQI為NA的資料紀錄。is.na(x)：如果x是NA的話，結果為TRUE，否則為FALSE。
+先利用`is.na()`查看AQI為NA的資料紀錄。
+is.na(x)：如果x是NA的話，結果為TRUE，否則為FALSE。
 
 ```{r eval=FALSE}
 df[is.na(df$AQI), ]
@@ -176,11 +207,7 @@ df$County <- factor(df$County)
 
 在執行上面的敘述後，在Console再次查看資料型態與資料摘要，注意County欄位的結果。原本County的資料型態是character，現在改為factor之後，會呈現各種值(各縣市)的出現次數。
 
-某些character型態的欄位資料則修改為有順序的factor，例如狀態(Status)。首先查看狀態(Status)上有哪些值
-
-```{r eval=FALSE}
-unique(df$Status)
-```
+某些character型態的欄位資料則修改為有順序的factor，例如狀態(Status)。
 
 狀態的值，可以依據AQI值的大小排序，"良好" < "普通" < "對敏感族群不健康" < "對所有族群不健康" < "危害"(參考[環保署空氣品質監測網](https://taqm.epa.gov.tw/taqm/tw/b0201.aspx)對空氣品質指標的定義)，另外還有"設備維護"。
 
@@ -253,7 +280,15 @@ table(df$Status)
 
 為了便於日後修改與使用，可將Script 存檔。建議利用工具列File 下面的**Save with Encoding** 存檔，Choose Encoding選擇UTF-8，以UTF-8文字編碼格式存檔。
 
+```{r echo=FALSE}
+knitr::include_graphics("image/save_encoding.png")
+```
+
 未來有需要再開啟這個Script 的話，可以利用File 下的**Reopen with Encoding**，再選擇UTF-8，重新開啟。
+
+```{r echo=FALSE}
+knitr::include_graphics("image/reopen_encoding.png")
+```
 
 ## 小結 {-}
 

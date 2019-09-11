@@ -381,15 +381,6 @@ seq(1, 8, 1.5)
 1:8
 ```
 
-**練習**
-產生以下的數列
-
-- 1到10間所有的整數
-- 1到10間所有的奇數
-- 1到10間所有的偶數
-- 1到10間所有3的倍數
-- 2的1到10乘方
-    
 函數`rep()`可以產生重複序列的vector。`rep()`包括`x`和`times`兩個參數，意思是將x重複times次。
 
 ``` {r}
@@ -398,13 +389,42 @@ rep(1:2, 4)
 rep(c(4, 82, 53), 3)
 ```
 
+**練習**
+產生以下的數列
+
+- 1到10間所有的整數
+- 1到10間所有的奇數
+- 1到10間所有的偶數
+- 1到10間所有3的倍數
+- 2的1到10乘方
+
+**進階研究**
+在R語言中，可以使用`pi`取得圓周率，嘗試用以下的方法畫出一個圓來
+
+- 首先將圓分為360等份，產生圓上的每一個角度
+```{r}
+pnt <- (2*pi)/360*(0:360)
+```
+
+- 每一個角度的X軸坐標為`sin(pnt)`，Y軸坐標為`cos(pnt)`。
+```{r eval=FALSE}
+sin(pnt)
+cos(pnt)
+```
+
+- 利用plot函數畫圖
+```{r}
+plot(sin(pnt), cos(pnt), type="l", xlab="", ylab="", asp=1)
+```
+
 ### matrix
 
-matrix可以視為是2度的vector
+matrix可以視為是2維的vector，也就是包含列與行
 
 ``` {r}
-intMatrix <- matrix(1:12, nrow=4)
+matrix(1:12, nrow=4)
 ```
+
 函數`matrix()`可以產生matrix資料型態。`matrix()`的參數有`data`, `nrow`, `ncol`和`byrow`，意思是將data上的資料表示成nrow列或ncol行的matrix。
 
 在matrix裡，橫列稱為row，直行稱為col。
@@ -412,7 +432,7 @@ intMatrix <- matrix(1:12, nrow=4)
 上面的matrix是以column為主排列，如果要以row為主來排列matrix的話，可以寫成
 
 ``` {r}
-intMatrix <- matrix(1:12, nrow=4, byrow=TRUE)
+matrix(1:12, nrow=4, byrow=TRUE)
 ```
 
 也就是`matrix(data, nrow, ncol, byrow)`：將data上的資料表示成nrow列或ncol行的matrix
@@ -422,9 +442,10 @@ intMatrix <- matrix(1:12, nrow=4, byrow=TRUE)
 如果要取用matrix上的元素
 
 ``` {r}
-intMatrix[1,]
-intMatrix[,2]
-intMatrix[3,1]
+intMatrix <- matrix(1:12, nrow=4, byrow=TRUE)
+intMatrix[1,] # 第一列
+intMatrix[,2] # 第二行
+intMatrix[3,1] # 第三列第一行
 ```
 
 matrix上的運算
@@ -434,9 +455,9 @@ matrix上的運算
 - 函數`sum()`可以計算x上的元素總和
 
 ``` {r}
-rowSums(intMatrix)
-colSums(intMatrix)
-sum(intMatrix)
+rowSums(intMatrix) # 每列上元素總和
+colSums(intMatrix) # 每行上元素總和
+sum(intMatrix)     # 所有元素總和
 ```
 
 函數`t()`可以轉置matrix，原先的行做為列，列做為行
@@ -460,6 +481,7 @@ spiderman <- list(id = "012",
                   team = "Avengers",
                   height = 178,
                   weight = 76)
+spiderman
 ```
 
 取得list上的資料有幾種方法
@@ -489,6 +511,8 @@ height <- c(190, 188, 178, 150, 183)
 weight <- c(102, 95, 76, 88, 59)
 gender <- c("Male", "Male", "Male", "Male", "Female")
 heroes <- data.frame(id, name, height, weight, gender)
+
+heroes
 ```
 data.frame為2個維度的資料型態。橫列為row，在R語言裡稱為Observation；直行為column，稱為Variable
 
