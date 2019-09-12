@@ -48,21 +48,15 @@ getwd()
 
 1. 進入[環境資源資料開放平臺](https://opendata.epa.gov.tw/)
 
-```{r echo=FALSE}
-knitr::include_graphics("image/epa_opendata.png")
-```
+![](image/epa_opendata.png)
 
 2. 將上面的網頁往下拉到大氣類的空氣品質指標
 
-```{r echo=FALSE}
-knitr::include_graphics("image/epa_aqi_search.png")
-```
+![](image/epa_aqi_search.png)
 
 3. 進入[空氣品質指標(AQI)](https://opendata.epa.gov.tw/Data/Contents/AQI/)
 
-```{r echo=FALSE}
-knitr::include_graphics("image/epa_aqi_data.png")
-```
+![](image/epa_aqi_data.png)
 
 環境資源資料開放平臺提供三種資料科學最常見的資料格式
 
@@ -72,26 +66,22 @@ knitr::include_graphics("image/epa_aqi_data.png")
 
 **CSV**是Comma Separated Values的縮寫。它是一種利用逗點(,)分隔每個Variable的資料檔案格式。在CSV檔案裡，除了第一列為資料名稱之外，其他列為Observation。
 
-```{r echo=FALSE}
-knitr::include_graphics("image/csv.png")
-```
+![](image/csv.png)
 
 **XML**是eXtensible Markup Language
-的縮寫。XML將資料表示成xml元素的集合，例如<DATA><AQI>32</AQI><CO>0.26</CO></DATA>。在CSV檔案裡，每一個元素由**標籤(tag)**構成，例如<AQI>32</AQI>，前面的標籤稱為開始標籤，後面的則稱為結束標籤，以前面的例子來說，開始標籤是<AQI>，結束標籤則是</AQI>。標籤裡是資料名稱，開始標籤與結束標籤之間便是資料值。
+的縮寫。XML將資料表示成xml元素的集合，例如`<Data><AQI>32</AQI><CO>0.26</CO></Data>`。在CSV檔案裡，每一個元素由**標籤(tag)**構成，例如`<AQI>32</AQI>`，前面的標籤稱為開始標籤，後面的則稱為結束標籤，以前面的例子來說，開始標籤是`<AQI>`，結束標籤則是`</AQI>`。標籤裡是資料名稱，開始標籤與結束標籤之間便是資料值。
 
-```{r echo=FALSE}
-knitr::include_graphics("image/xml.png")
-```
+![](image/xml.png)
 
-**JSON**代表JavaScript Object Notation，也就是以JavaScript物件(object)的方式表示資料的檔案格式，例如：{"AQI":"32", "CO":"0.26"}。其中的AQI為資料名稱，32為資料值。
+**JSON**代表JavaScript Object Notation，也就是以JavaScript物件(object)的方式表示資料的檔案格式，例如：`{"AQI":"32", "CO":"0.26"}`。其中的AQI和CO為資料名稱，32和0.26為資料值。
 
-```{r echo=FALSE}
-knitr::include_graphics("image/json.png")
-```
+![](image/json.png)
 
 在本次課程中，先以CSV格式讀取空氣品質指標檔案，未來可利用R語言的套件直接讀取XML和JSON格式資料。
 
-在R中讀入csv資料，
+---
+
+在R語言中讀入csv資料，
 
 1. 在**Script**上輸入下面的敘述
 
@@ -123,15 +113,17 @@ df <- read.csv(file="http://opendata.epa.gov.tw/webapi/Data/REWIQA/?$orderby=Sit
 - 資料的型態？
 - 資料的分布？
 
+---
+
 首先檢視讀入的資料。data frame的資料檢視可以直接點選Environment上的df或在Console輸入
 
 ```{r eval=FALSE}
 View(df)
 ```
 
-```{r echo=FALSE}
-knitr::include_graphics("image/aqi_df.png")
-```
+![](image/aqi_df.png)
+
+---
 
 若是資料數量太多，可以先檢視頭尾幾筆資料。
 
@@ -142,6 +134,8 @@ knitr::include_graphics("image/aqi_df.png")
 head(df)
 tail(df)
 ```
+
+---
 
 接著查看data frame 的資料數量，有多少列(多少個Observations)？多少行(多少個Variables)？
 
@@ -155,6 +149,8 @@ ncol(df)
 dim(df)
 ```
 
+---
+
 然後，再利用`str()`查看data frame上各欄位的資料型態
 
 ```{r eval=FALSE}
@@ -162,6 +158,8 @@ str(df)
 ```
 
 目前df上各行的資料型態可以看到有int(integer)、num(numeric)和chr(character)
+
+---
 
 最後，利用`summary(x)`檢視上各行(欄位)的資料分布情形
 
@@ -280,15 +278,13 @@ table(df$Status)
 
 為了便於日後修改與使用，可將Script 存檔。建議利用工具列File 下面的**Save with Encoding** 存檔，Choose Encoding選擇UTF-8，以UTF-8文字編碼格式存檔。
 
-```{r echo=FALSE}
-knitr::include_graphics("image/save_encoding.png")
-```
+![](image/save_encoding.png)
+
+---
 
 未來有需要再開啟這個Script 的話，可以利用File 下的**Reopen with Encoding**，再選擇UTF-8，重新開啟。
 
-```{r echo=FALSE}
-knitr::include_graphics("image/reopen_encoding.png")
-```
+![](image/reopen_encoding.png)
 
 ## 小結 {-}
 
