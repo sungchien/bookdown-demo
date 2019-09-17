@@ -70,7 +70,7 @@ while(eof_flag==FALSE) {
 write.csv(tot_df, file="AQI_data_2019_07_26.csv", row.names = FALSE)
 ```
 
-0. 讀取日空氣品質指標檔案
+0. 讀取[日空氣品質指標檔案](AQI_data_2019_07_26.csv)
 ```{r}
 df <- read.csv("AQI_data_2019_07_26.csv", stringsAsFactors = FALSE)
 ```
