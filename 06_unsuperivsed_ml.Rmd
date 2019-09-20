@@ -7,14 +7,14 @@
 
 - 資料探勘簡介
 - 集群分析簡介
-- 集群分析AP演算法的應用
+- 集群分析AP (Affinity Propagation)演算法的應用
 
 ### 學習目標 {-}
 
 - 能夠解釋資料探勘的定義與過程
 - 能夠指出監督式機器學習與非監督式機器學習的定義與適用問題
 - 能夠說明集群分析的概念，並選擇適用的問題
-- 能夠應用apcluster進行集群分析
+- 能夠應用AP演算法的套件apcluster進行集群分析
 
 ## 資料探勘的定義
 
@@ -24,31 +24,37 @@
 
 一般來說，資料探勘的任務目的包括預測(prediction)、關連(association)、集群(clustering)、異常偵測(anomaly detection)等等。
 
-- 預測是根據蒐集的Observation資料特徵建立一個模型(model)，來判斷新的Observation可能的資訊，蒐集的Observation一般稱為訓練集(training set)資料。預測的資訊可能是新Observations上的某一個未知數值或是實體所屬的類別。預測未知的數據時，這種問題又稱為迴歸(regression)；當預測的目的是判斷Observations的類別時，這種資料探勘任務則稱為分類(classification)。比較著名的預測例子，根據天氣預報資料以及地區以往雨具銷售情形，判斷未來一段時間內的雨具銷售。又如垃圾郵件偵測，便是從一些已經標示為垃圾郵件與非垃圾郵件的文字資料訓練出模型來判斷新進郵件是否為垃圾郵件。
+- **預測**是根據蒐集的Observation資料特徵建立一個模型(model)，來判斷新的Observation可能的資訊，蒐集的Observation一般稱為訓練集(training set)資料。預測的資訊可能是新Observations上的某一個未知數值或是實體所屬的類別。預測未知的數據時，這種問題又稱為**迴歸(regression)**；當預測的目的是判斷Observations的類別時，這種資料探勘任務則稱為**分類(classification)**。比較著名的預測例子，根據天氣預報資料以及地區以往雨具銷售情形，判斷未來一段時間內的雨具銷售。又如垃圾郵件偵測，便是從一些已經標示為垃圾郵件與非垃圾郵件的文字資料訓練出模型來判斷新進郵件是否為垃圾郵件。
 
-- 關連是發現在訓練資料中經常一起出現的一組特徵，最有名的例子便是運用購物籃分析(market basket analysis)發現啤酒與尿布的關連。
+- **關連**是發現在訓練資料中經常一起出現的一組特徵，最有名的例子便是運用購物籃分析(market basket analysis)發現啤酒與尿布的關連。
 
-- 集群是根據Observations之間的相似性(或者距離)，找出一種將Observations劃分成若干群的方式，盡可能使得群內的Observations彼此間的相似性大於任何群外的Observations (或是彼此間的距離小於群外的距離)。相關的例子有根據詞語的上下文資訊找出語意相關的詞語集群。 (舉例而言，政治、經濟、財稅金融、影視娛樂、運動或者醫療健康等相同文類的詞語它們彼此的上下文資訊應當很相像，但和其他文類的詞語會有相當不同的上下文資訊，因此可以依據上下文資訊對詞語進行集群分析。未來會有一章專門介紹詞語的集群分析。)
+- **集群**是根據Observations之間的相似性(或者距離)，找出一種將Observations劃分成若干群的方式，盡可能使得群內的Observations彼此間的相似性大於任何群外的Observations (或是彼此間的距離小於群外的距離)。相關的例子有根據詞語的上下文資訊找出語意相關的詞語集群。 (舉例而言，政治、經濟、財稅金融、影視娛樂、運動或者醫療健康等相同文類的詞語它們彼此的上下文資訊應當很相像，但和其他文類的詞語會有相當不同的上下文資訊，因此可以依據上下文資訊對詞語進行集群分析。未來會有一章專門介紹詞語的集群分析。)
 
-- 異常偵測則是發現某一些Observations，其資料特性與其他多數者明顯不同。例如從信用卡的交易資料中發現盜刷的交易，或是找出健保詐騙的醫療處方箋。
+- **異常偵測**則是發現某一些Observations，其資料特性與其他多數者明顯不同。例如從信用卡的交易資料中發現盜刷的交易，或是找出健保詐騙的醫療處方箋。
 
 ### 資料探勘的步驟
 
 資料探勘的目的可以定義為一個從資料庫中發現知識的過程 (Knowledge Discovering in Databases, KDD)，依據Fayyad等人於1996年提出的構想，整個KDD過程包括
 
-1. 選取資料
-2. 資料的清除與整理等前處理
-3. 轉換資料為有效描述和預測的特徵
-4. 運用機器學習(machine learning)的技術建立資料模型 (狹義的資料探勘)
-5. 解釋與應用
+1. 選取資料 (Selection)
+2. 資料的清除與整理等前處理 (Preprocessing)
+3. 轉換資料為有效描述和預測的特徵 (Transformation)
+4. 運用機器學習(machine learning)的技術建立資料模型 (狹義的資料探勘) (Data Mining)
+5. 解釋、評估與應用 (Intepretation/Evaluation)
+
+![](image/Fayyad96kdd-process.png)
 
 ### 資料探勘的分類
 
 資料探勘的過程中運用機器學習的技術，其應用大致可以區分成**監督式學習(supervised learning)**和**非監督式學習(unsupervised learning)**兩種。兩者的差別在於，前者在過程中需要提供加入人類判斷的訊息，用來做為預測未知資料的訊息，後者則由電腦依據訓練資料的特性，歸納出可能的訊息。以上述的應用而言，預測大多屬於監督式學習，而集群則一般認為是非監督式學習。本章介紹非監督式學習中的集群分析。
 
+![](image/new-ai.jpg)
+
 ### 集群分析
 
 如前所言，集群分析是根據資料的特性，設法找到一個可以良好地突顯資料間彼此相似性與相異性的方式。換言之，集群分析的結果是根據輸入資料之間彼此的相似性，找到一種劃分方法使得相似性較高的資料會被劃分在同一群組內，不在同一群組內的資料之間相似性則比較低。
+
+![](image/clustering.png)
 
 集群分析的演算法非常多，如
 
@@ -60,6 +66,9 @@
 ...
 
 本節將利用AP演算發，對台鐵各站點，依照進出站人數統計資料的相似性，進行集群分析。
+
+AP演算法可參考
+Bodenhofer, U., Kothmeier, A., & Hochreiter, S. (2011). APCluster: an R package for affinity propagation clustering. Bioinformatics, 27(17), 2463-2464.
 
 ## 以進出站人數統計資料對臺鐵各站點進行集群分析
 
@@ -79,10 +88,17 @@ library(jsonlite)
 df <- fromJSON("https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/8ae4cabf6973990e0169947ed32454b9")
 ```
 
+![](image/station_io.png)
+
 查看資料型態
 ```{r}
 summary(df)
 ```
+
+- trnOpDate： 營運日期
+- staCode： 車站代碼
+- gateInComingCnt： 進站人數
+- gateOutGoingCnt： 出站人數
 
 將trnOpDate改變為日期資料型態，gateInComingCnt和gateOutGoingCnt則分別改為numeric資料型態。
 ```{r}
@@ -92,12 +108,18 @@ df <- df %>%
   mutate(gateOutGoingCnt=as.numeric(gateOutGoingCnt))
 ```
 
+再查看一次資料型態
+```{r}
+summary(df)
+```
 ---
 
-因為出入站資料僅有包含站點編號，所以從另外一個開放資料[車站基本資料集](https://data.gov.tw/dataset/33425)，讀取站點編號對應的名稱資料。
+因為出入站資料僅有包含車站代碼，所以從另外一個開放資料[車站基本資料集](https://data.gov.tw/dataset/33425)，讀取站點編號對應的名稱資料。
 ```{r}
 site.df <- fromJSON("http://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/0518b833e8964d53bfea3f7691aea0ee")
 ```
+
+![](image/station.png)
 
 將進出站點資料加入站點名稱。
 ```{r results='hide', message=FALSE, warning=FALSE}
@@ -133,30 +155,9 @@ df %>%
         axis.line = element_line(color="grey20"),
         panel.grid.major = element_line(color="grey90"))
 ```
-從圖形上可以觀察到5月後資料的數量級較之前大非常多，可能導致分析錯誤。
 
-所有站點的進出人數總和是否有同樣情形？
+所有站點的進出人數總和
 ```{r}
-df %>%
-  group_by(trnOpDate) %>%
-  summarise(In=sum(gateInComingCnt), Out=sum(gateOutGoingCnt)) %>%
-  gather(key=IO, value=Count, -trnOpDate) %>%
-  ggplot() +
-  geom_line(aes(x=trnOpDate, y=Count, color=IO)) +
-  scale_y_continuous(limits=c(0, 900000), breaks=seq(0, 900000, 100000)) +
-  scale_color_brewer(palette="Dark2", labels=c("進站", "出站")) +
-  labs(x="日期", y="進出站人數", color="進出") +
-  theme(panel.background = element_blank(),
-        axis.line = element_line(color="grey20"),
-        panel.grid.major = element_line(color="grey90"))
-```
-
-刪除五月以前的資料，再重新檢視。
-
-```{r}
-df <- df %>%
-  filter(trnOpDate>=as.Date("2019-05-01"))
-
 df %>%
   group_by(trnOpDate) %>%
   summarise(In=sum(gateInComingCnt), Out=sum(gateOutGoingCnt)) %>%
@@ -319,8 +320,7 @@ sta_inf.pca <- prcomp(sta_inf.mat)
 ```{r}
 summary(sta_inf.pca)
 ```
-。其中的Standard deviation是只用這個維度上的特徵的標準差，可以利用標準差計算變異數所佔的比例(Proportion of Varience)，以第一個維度(PC1)來說，標準差是0.03016
-，經過計算後，變異數所佔的比例為0.84913，也就是只用第一個維度的特徵便可以表現0.84913的訊息，因此第一個維度是最重要的資料描述方式。第二個維度的變異數所佔的比例為0.070720，比第一個維度小，但比其他維度大，所以在資料描述方式上，它是第二重要的。以下依此類推。並且前三個維度(PC1、PC2和PC3)的變異數比例累積(Cumulative Proportion)為0.957170，也就是說只使用這三個維度便可以表現整個資料訊息的0.957170。所以，以下的分析將使用前三個維度。
+。其中的Standard deviation是只用這個維度上的特徵的標準差，可以利用標準差計算變異數所佔的比例(Proportion of Varience)，以第一個維度(PC1)來說，變異數所佔的比例約為0.84，也就是只用第一個維度的特徵便可以表現0.84的訊息，因此第一個維度是最重要的資料描述方式。第二個維度的變異數所佔的比例比第一個維度小，但比其他維度大，所以在資料描述方式上，它是第二重要的。以下依此類推。並且前三個維度(PC1、PC2和PC3)的變異數比例累積(Cumulative Proportion)約為0.96，也就是說只使用這三個維度便可以表現整個資料訊息的0.96。所以，以下的分析將使用前三個維度。
 
 將各個維度的變異數比例累積畫成圖形來看。
 
