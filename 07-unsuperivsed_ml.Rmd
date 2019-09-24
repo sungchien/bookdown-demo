@@ -142,10 +142,9 @@ df %>%
 
 ### 產生站點資料特徵
 
-
 站點資料特徵便是用來一組描述站點特性的資料。
 
-每個站點每天平均進出站人數
+首先計算每個站點每天平均進出站人數，以便接下來找出主要的車站
 ```{r}
 df %>%
   group_by(staName) %>%
@@ -154,7 +153,7 @@ df %>%
   arrange(desc(In))
 ```
 
-選取主要站點(每天平均進入人數達5000人以上)
+選取主要車站(每天平均進入人數達5000人以上)
 ```{r}
 cand_sta <- df %>%
   group_by(staName) %>%
@@ -164,25 +163,31 @@ cand_sta <- df %>%
   pull(staName)
 ```
 
-從原始資料中取出中等規模以上站點的資料
+從原始資料中取出主要車站的資料
 ```{r}
 df1 <- df %>%
   filter(staName %in% cand_sta)
 ```
 
-根據前面的折線圖，我們可以觀察到進出站人數具有週期性變化的情形，而其週期大約是一週(一星期)。所以可能可以以一週為單位，彙整資料，避免雜訊(某一天突然增加或減少的異常值)。檢視汐科站在一週每天的進出人數分布範圍。
+根據前面的折線圖，我們可以觀察到進出站人數具有週期性變化的情形，而其週期大約是一週(一星期)。所以可能可以以一週為單位，彙整每一天進出站人數資料(取平均)，同時也注意避免雜訊(某一天突然增加或減少的異常值)。
+
+```{r}
+df1 %<>%
+  mutate(trnOpDateW=wday(trnOpDate, label=TRUE, locale="English")) %>%
+  group_by(staName, trnOpDateW) %>%
+  summarise(In=mean(gateInComingCnt, trim=0.05), Out=mean(gateOutGoingCnt, trim=0.05)) # 捨棄前後0.05最大與最小的資料
+```
+
+檢視汐科站在一週每天的進出人數分布範圍。
 ```{r}
 df1 %>%
   filter(staName=="汐科") %>%
-  rename(In=gateInComingCnt, Out=gateOutGoingCnt) %>%
-  gather(key="Var", value="Count", -staName, -staCode, -trnOpDate) %>%
-  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
   ggplot() +
-  geom_boxplot(aes(x=Var, y=Count)) +
-  scale_x_discrete(labels=c("進站", "出站")) +
+  geom_col(aes(x=trnOpDateW, y=Count, fill=Var), position="dodge") +
+  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
-  labs(x="", y="進出人數") +
-  facet_wrap(~trnOpDateW, nrow=2) +
+  labs(x="", y="平均進出站人數") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey"))
 ```
@@ -191,15 +196,12 @@ df1 %>%
 ```{r}
 df1 %>%
   filter(staName=="臺東") %>%
-  rename(In=gateInComingCnt, Out=gateOutGoingCnt) %>%
-  gather(key="Var", value="Count", -staName, -staCode, -trnOpDate) %>%
-  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
   ggplot() +
-  geom_boxplot(aes(x=Var, y=Count)) +
-  scale_x_discrete(labels=c("進站", "出站")) +
+  geom_col(aes(x=trnOpDateW, y=Count, fill=Var), position="dodge") +
+  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
-  labs(x="", y="進出人數") +
-  facet_wrap(~trnOpDateW, nrow=2) +
+  labs(x="", y="平均進出站人數") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey"))
 ```
@@ -208,59 +210,37 @@ df1 %>%
 ```{r}
 df1 %>%
   filter(staName=="臺北") %>%
-  rename(In=gateInComingCnt, Out=gateOutGoingCnt) %>%
-  gather(key="Var", value="Count", -staName, -staCode, -trnOpDate) %>%
-  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
+  gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
   ggplot() +
-  geom_boxplot(aes(x=Var, y=Count)) +
-  scale_x_discrete(labels=c("進站", "出站")) +
-  scale_y_continuous(limits=c(0, 90000), breaks=seq(0, 90000, 10000)) +
-  labs(x="", y="進出人數") +
-  facet_wrap(~trnOpDateW, nrow=2) +
+  geom_col(aes(x=trnOpDateW, y=Count, fill=Var), position="dodge") +
+  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
+  scale_y_continuous(limits=c(0, 80000), breaks=seq(0, 80000, 8000)) +
+  labs(x="", y="平均進出站人數") +
   theme(panel.background = element_blank(),
         axis.line = element_line(color="grey"))
 ```
 
 注意週日和週五、週六與平日的情形，汐科站平日進出站人數多於週日和週六，每天的進出站人數大致相同；臺東站的週五和週六出站多於進站，週日則相反；臺北站的週五和週六則是進站多於出站；且臺北和臺東的週末進出人數都多於週間平日。
 
-首先，計算每個站點在一週中每天的進出站人數平均值(刪除前後各5%的極端值以避免極端值的影響)。接著以長條圖顯示上述的進出站人數變化現象，。
+針對上述的現象，我們決定以兩組特徵來表示，第一組特徵表現平日進出站人數與週六、日的不同。
 
 ```{r}
-df1 %>%
-  mutate(trnOpDateW=wday(trnOpDate, label=TRUE)) %>%
-  group_by(staName, trnOpDateW) %>%
-  summarise(In=mean(gateInComingCnt, trim=0.05), Out=mean(gateOutGoingCnt, trim=0.05)) %>%
-  ungroup() %>%
-  gather(key=variable, value=value, -staName, -trnOpDateW) %>%
-  group_by(staName) %>%
-  mutate(value=value/sum(value)) %>%
-  filter(staName %in% c("汐科", "臺北", "臺東")) %>%
-  ggplot() +
-  geom_col(aes(x=trnOpDateW, y=value, fill=variable), position="dodge") +
-  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
-  labs(x="週", y="人數佔全週進出人數比例", fill="進出") +
-  facet_wrap(~staName, nrow=3) +
-  theme(panel.background = element_blank(),
-        axis.line = element_line(color="grey"),
-        panel.grid.major = element_line(color="grey"))
+sta_inf1 <- df1 %>%
+  gather(key=Var, value=Value, -staName, -trnOpDateW) %>%
+  group_by(staName, Var) %>%
+  mutate(Value=Value/sum(Value)) %>%
+  unite(temp, trnOpDateW, Var) %>%
+  spread(key=temp, value=Value)
 ```
 
-從長條圖的示意可以觀察到產生的特徵保留上述分析的特性
-
-以下的研究即利用這個觀察到的現象將資料分群。首先產生每一個站點的資料特徵。
+第二組特徵表現每日進出站人數的不同。
 ```{r}
-sta_inf <- df1 %>%
-  mutate(trnOpDateW=wday(trnOpDate, locale="English", label=TRUE)) %>%
-  group_by(staName, trnOpDateW) %>%
-  summarise(In=mean(gateInComingCnt, trim=0.05), Out=mean(gateOutGoingCnt, trim=0.05)) %>%
-  ungroup() %>%
-  gather(key=variable, value=value, -staName, -trnOpDateW) %>%
-  group_by(staName) %>%
-  mutate(value=value/sum(value)) %>%
-  ungroup() %>%
-  unite(temp, trnOpDateW, variable) %>%
-  spread(key=temp, value=value)
+sta_inf2 <- df1 %>%
+  mutate(IORatio=In/Out) %>%
+  select(staName, trnOpDateW, IORatio) %>%
+  spread(key=trnOpDateW, value=IORatio)
 ```
+
 
 檢視產生的資料
 ```{r}
