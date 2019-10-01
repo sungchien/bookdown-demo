@@ -23,12 +23,15 @@
 常用的分類演算法:
 
 - K-Nearest Neighbors演算法
+- Naive Bayes 分類演算法
 - 決策樹(devision tree)
 - 
 
 ## TMDB電影評分預測
 
 TMDB資料是[Kaggle](https://www.kaggle.com/)提供做為學習資料科學的資料集。Kaggle利用[TMDB (The Movie Database)](https://www.themoviedb.org/?language=zh-TW)提供的電影資料建立的資料集，大約有5000筆電影資料，在Kaggle上的下載點為[TMDB 5000 Movie Dataset](https://www.kaggle.com/tmdb/tmdb-movie-metadata/downloads/tmdb-5000-movie-dataset.zip/2)。
+
+![](image/tmdb.png)
 
 本次課程將利用TMDB資料集說明如何應用電影資料(片長、類型、製作公司、預算、收入、...等)，進行監督式機器學習，預測電影評分。可參考[Project Report: IMDB 5000 Movie Dataset](http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)，有類似的做法。
 
@@ -45,6 +48,8 @@ library(tidyverse)
 ```{r message=FALSE, warning=FALSE}
 movies <- read_csv("tmdb_5000_movies.csv")
 ```
+
+![](image/tmdb_data.png)
 
 讀入資料後，先看資料的情況。
 
@@ -520,11 +525,57 @@ knn_res <- knn(subset(train_set, select=-vote_average_p),
 confusionMatrix(knn_res, test_set$vote_average_p)$overall[1]
 ```
 
+
+## 進行Naive Bayes演算法分類
+
+```{r}
+library(naivebayes)
+```
+
+```{r}
+NB_model <- naive_bayes(vote_average_p ~ ., 
+                               usekernel=TRUE, data=train_set)
+```
+
+```{r}
+NB_res <- predict(NB_model, newdata=test_set, type="class")
+
+
+confusionMatrix(NB_res, test_set$vote_average_p)$overall[1]
+```
+
+## 進行支持向量機分類
+
+支持向量機(Support Vector Machine, SVM)試圖從訓練資料中找到一個超平面(hyperplane)，將訓練資料區分成兩個具有最大差異的類別。以下圖為例，可以發現右圖上的超平面具有最好的分類結果，因為該超平面距離兩個類別上所有的資料是最大的情形。用來找到這個超平面的資料便稱為支持向量(Support Vectors)，例如在右圖上以實心表現的資料點。當新資料需要進行分類時，便根據超平面判斷新資料的類別。
+
+![](image/svm.png)
+
+由於SVM原本的應用是針對兩個類別的問題，在將SVM應用到多個類別時，需要採用One-against-One的策略，也就是對每兩個類別分別建立一個SVM模型，所以若是有M個類別的話，便須建立$\frac{M(M-1)}{2}$個SVM模型。當新資料輸入後，便以這立$\frac{M(M-1)}{2}$個SVM模型進行預測，以多數決決定預測的類別。
+
+e1071套件中提供SVM分類演算法。先安裝後，再載入該套件。
+```{r}
+library(e1071)
+```
+
+利用訓練資料進行分類模型訓練
+```{r}
+SVM_model <- svm(vote_average_p ~ ., 
+                 data=train_set)
+```
+
+預測測試資料的類別，計算其準確度
+```{r}
+SVM_res <- predict(SVM_model, newdata=test_set, type="class")
+
+confusionMatrix(SVM_res, test_set$vote_average_p)$overall[1]
+```
+
 ## 進行決策樹分類
 
 機器學習中，決策樹是一種樹型結構的分類方法，在樹型結構的第一層分支上對全體的資料依照某一個條件進行分類，分類後盡量使同一群內的資料具有相同的輸出資訊，也就是提高輸出資訊的純度。然後在接下來的第二層分支，再分別對這兩群資料進行分類，使得分類後的結果純度再提高。反覆進行上述的分類過程，當不能再進行分類或一個單獨的類可以被應用於某一分支時，決策樹的建置就完成了。
 
 ![](image/classification_tree.png)
+
 套件`rpaprt`提供決策樹應用。安裝`rpaprt`套件後，載入這個套件。
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(rpart)
@@ -574,10 +625,6 @@ confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
 
 ## 進行隨機森林監督式學習
 
-### 利用隨機森林套件randomForest進行監督式機器學習
-
-`caret`套件的rf方法的原生套件稱為randomForest，以下以randomForest進行監督式機器學習。
-
 載入隨機森林套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(randomForest)
@@ -607,18 +654,6 @@ confusionMatrix(rf_res, test_set$vote_average_p)$overall[1]
 
 ## 隨機梯度增強
 
-### 利用caret套件的gbm方法進行隨機梯度增強監督式學習
-
-```{r}
-mod_gbm <- train(vote_average_p ~ .,
-                method = "gbm",
-                data = train_set,
-                tuneLength = 10, 
-                metric = "Accuracy",
-                trControl = tr_control)
-```
-
-### 
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(gbm)
 ```
@@ -646,15 +681,13 @@ confusionMatrix(gbm_res_labels, test_set$vote_average_p)$overall[1]
 library(nnet)
 ```
 
-```{r}
-nnet_model <- nnet(vote_average_p ~ ., data = train_set, linout = TRUE, size = 30, decay = 0.001, maxit = 10000)
+```{r results='hide', message=FALSE, warning=FALSE}
+nnet_model <- nnet(vote_average_p ~ ., data = train_set, linout = TRUE, size = 30, decay = 0.001, maxit = 5000)
 ```
 
 ```{r}
 nnet_res <- predict(nnet_model, test_set, type = 'class')
-```
 
-```{r}
 confusionMatrix(as.factor(nnet_res), test_set$vote_average_p)$overall[1]
 ```
 
