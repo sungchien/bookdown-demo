@@ -4,6 +4,7 @@
 
 ### 課程簡介 {-}
 
+**分類**是根據蒐集的資料案例，以訓練演算法建立一個模型，來指定新的資料的類別。本次課程的目的為介紹監督式機器學習中的分類問題，並且利用TMDB電影資料，從片長、類型、製作公司、預算、收入、...等電影資料，預測電影的評分，進行分類的練習。本次課程包含以下的內容：
 
 ### 學習目標 {-}
 
@@ -11,9 +12,19 @@
 
 監督式機器學習 (supervised machine learning)是利用一組已經標注結果的資料，預測尚未標注結果的新資料的可能結果。以數學的方式來表示這個概念，監督式機器學習利用一組資料 $X_{1}, X_{2}, ..., X_{N}$ 以及其對應的結果 $Y_{1}, Y_{2}, ..., Y_{N}$ ，設法找到一個模型 $f(x)$ ，盡可能使 $f(X_{1}) = Y_{1}$ 、 $f(X_{2}) = Y_{2}$ 、...、 $f(X_{N}) = Y_{N}$ 。當有新的資料 $\hat{X}$ 進入時，可以利用 $f(x)$ 計算的結果 $f(\hat{X})$ ，做為可能結果的預測。
 
+---
+
 通常來說，如果要預測的結果是連續的數值，通常將這類的問題稱為**迴歸 (regression)**，如果是離散型的結果的話，則稱為**分類 (classification)**。
 
+### 分類
+
 分類的問題可以視為運用現有的資料 $X_{1}, X_{2}, ..., X_{N}$ 以及其對應的類別 $Y_{1}, Y_{2}, ..., Y_{N}$ ，嘗試找到一個分類器模型 $f(x)$ 來預測新資料 $\hat{X}$ 的類別 $f(\hat{X})$ 。
+
+常用的分類演算法:
+
+- K-Nearest Neighbors演算法
+- 決策樹(devision tree)
+- 
 
 ## TMDB電影評分預測
 
@@ -21,25 +32,32 @@ TMDB資料是[Kaggle](https://www.kaggle.com/)提供做為學習資料科學的�
 
 本次課程將利用TMDB資料集說明如何應用電影資料(片長、類型、製作公司、預算、收入、...等)，進行監督式機器學習，預測電影評分。可參考[Project Report: IMDB 5000 Movie Dataset](http://rstudio-pubs-static.s3.amazonaws.com/342210_7c8d57cfdd784cf58dc077d3eb7a2ca3.html#problem-statement)，有類似的做法。
 
-### 讀入資料
+### 載入tidyverse套件
 
 載入`tidyverse`套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(tidyverse)
 ```
 
+### 讀入資料
+
 讀取TMDB資料集
 ```{r message=FALSE, warning=FALSE}
 movies <- read_csv("tmdb_5000_movies.csv")
 ```
 
-讀入資料後，先看目前的情況。
+讀入資料後，先看資料的情況。
+
+```{r}
+str(movies)
+```
+
 ```{r}
 summary(movies)
 ```
 
 
-## 資料整理與探索性資料分析
+### 資料的清除與整理
 
 整理各個variable，分為以下四類
 
@@ -50,7 +68,9 @@ summary(movies)
 5. 簡單字串資料類型：original_language
 6. 複雜字串資料類型：genres, production_companies
 
-### 處理與本次分析無關的variables
+---
+
+**處理與本次分析無關的variables**
 
 與本次分析無關的variables，不需進一步分析，可以直接捨棄。
 ```{r}
@@ -60,7 +80,9 @@ movies <- movies %>%
 
 捨棄這些variables後，資料集從20個variables，轉換為11個variables。
 
-### 數值資料類型
+---
+
+**整理數值資料類型的variables**
 
 觀察每個數值資料的範圍
 ```{r}
@@ -82,6 +104,8 @@ movies %>%
   summary()
 ```
 
+---
+
 `budget`最小為1 ，看起來仍然不合理。顯示`budget`少於1000的電影共幾筆？
 ```{r}
 print(paste("budget少於1000的電影數量：", nrow(movies[movies$budget<1000,])))
@@ -93,6 +117,8 @@ movies <- movies %>%
   filter(budget>=1000)
 ```
 
+---
+
 收入太少，也不正常，顯示`revenue`少於1000的電影共幾筆？
 ```{r}
 print(paste("revenue少於1000的電影數量：", nrow(movies[movies$revenue<1000,])))
@@ -103,6 +129,8 @@ print(paste("revenue少於1000的電影數量：", nrow(movies[movies$revenue<10
 movies <- movies %>%
   filter(revenue>=1000)
 ```
+
+---
 
 分析`runtime`的分布情形
 ```{r}
@@ -127,6 +155,7 @@ movies <- movies %>%
   filter(runtime>=60)
 ```
 
+---
 
 最後分析`vote_count`，由於我們希望預測電影的評分資料，如果評分人數太少，評分可能較不準確。顯示`vote_count`少於100的電影共幾筆？
 ```{r}
@@ -138,6 +167,8 @@ print(paste("vote_count少於100的電影數量：", nrow(movies[movies$vote_cou
 movies <- movies %>%
   filter(vote_count>=100)
 ```
+
+---
 
 我們要預測的目標是平均評分`vote_average`，檢視這個variable的分布情形。
 ```{r}
@@ -174,13 +205,24 @@ movies %>%
         panel.grid.major.y = element_line(color="grey90"))
 ```
 
+---
+
 捨棄`vote_count`和`vote_average`兩個variables
 ```{r}
 movies <- movies %>%
   select(-vote_count, -vote_average)
 ```
 
-### 日期資料類型
+---
+
+**修改日期資料類型的variables成factor資料類型，然後轉換成one-hot encoding的形式**
+
+說明： 
+
+1. 因為輸入分類的variables最好是numeric，而且資料的分布比較平均比較好。因此先將日期資料型態改成factor資料型態，再轉變成one-hot encoding的形式。
+
+2. one-hot encoding適用於名目或順序尺度的variables。對於某一個名目或順序尺度的variables，如果它有m個可能值，那麼經過one-hot encoding碼後，就變成了m個二元variables(0或1)。每一個二元variable表示原先的variable的一種可能值。例如，某一個variable(稱為light)的可能值為"red"、"yellow"和"green"，將light經過one-hot encoding後，將會產生3個二元variables(red、yellow和green)。如果某一個observation在light上的值是"red"，經過one-hot encoding後，這個observation在red上的值為1，yellow和green則都是0。
+
 分析`release_date`，因為其資料型態是`Date`，所以載入日期時間處理套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(lubridate)
@@ -243,7 +285,10 @@ movies <- movies %>%
   select(-release_date, -release_year)
 ```
 
-### 簡單字串類型
+---
+
+**處理簡單字串類型的variables**
+
 簡單字串資料類型與複雜資料的差別是前者的資料格式較單純，簡單字串資料類型只有一個variable：`original_language`。
 
 分析`original_language`
@@ -261,7 +306,9 @@ movies <- movies %>%
   select(-original_language)
 ```
 
-### 複雜字串資料類型
+---
+**處理複雜字串資料類型的variables**
+
 IMDB 5000 Movie Dataset中，為了可以表示多個可能的值，`genres`(電影類型)和`production_companies`製作公司都是屬於較複雜的字串資料類型，而且都是以JSON的方式表示這些值。例如
 
 ```{r}
@@ -277,8 +324,8 @@ library(jsonlite)
 ```{r}
 valueExtract <- function (y) {
   x<- fromJSON(y)
-  g <- paste(x$name, collapse="%")
-  gsub(" ", "_", g)
+  g <- paste(x$name, collapse="%") #每一個值之間以%分隔
+  gsub(" ", "_", g) #將空白改為底線，便於進一步處理
 }
 ```
 
@@ -312,7 +359,7 @@ movies_genres %>%
 ```
 最多為Drama、Comedy、Thriller和Action，最少者如Western和Documentary。
 
-將movies_genres從long format轉成wide format
+將movies_genres從long format轉成wide format。將電影所屬的genres，設為1，不屬於的genres，設為0。
 ```{r}
 movies_genres <- movies_genres %>%
   mutate(genres_data=paste0("g_", genres_data)) %>%
@@ -325,6 +372,8 @@ movies <- movies %>%
   left_join(movies_genres) %>%
   select(-genres, -genres_data)
 ```
+
+---
 
 分析`production_companies`
 ```{r}
@@ -387,7 +436,7 @@ movies %>%
 
 ```
 
-### 完成資料整理
+---
 
 在進行資料探勘前，最後再檢視一次movies
 ```{r}
@@ -400,12 +449,14 @@ movies <- movies %>%
   select(-id)
 ```
 
-## 建立訓練資料與測試資料
+### 轉換資料為有效描述和預測的特徵
 
 載入套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(caret)
 ```
+
+**建立訓練資料與測試資料**
 
 將TMDB電影資料分為訓練集與測試集，訓練資料用來訓練各種分類器，測試資料比較各種分類器的成效。
 ```{r}
@@ -423,7 +474,7 @@ train_set <- movies[trainRowNumbers,]
 test_set <- movies[-trainRowNumbers,]
 ```
 
-將資料進行預處理(preprocessing)，前四個variables
+調整每個variable的值，前四個variables(budget, popularity, revenue, run_time)根據平均數和標準差進行調整，最後一個variable(top_pc_number)調整為0與1之間
 ```{r}
 preprocessParams_1 <- preProcess(train_set[,1:4], method=c("center", "scale"))
 train_set[,1:4] <- predict(preprocessParams_1, train_set[,1:4])
@@ -434,13 +485,18 @@ train_set[,ncol(train_set)] <- predict(preprocessParams_2, train_set[,ncol(train
 test_set[,ncol(train_set)] <- predict(preprocessParams_2, test_set[,ncol(train_set)])
 ```
 
-## 進行KNN
-## 進行分類樹監督式機器學習
+## 進行K-Nearest Neightbors分類
 
-載入套件
+K-Nearest Neightbors分類演算法(以下簡稱KNN)，是最直覺的分類演算法。有別於其他監督式機器學習的分類演算法，KNN不需要先利用已經知道類別的資料訓練預測模型，其主要的概念是將要預測的資料與已經知道類別的資料進行比對，找出最相似的K個資料(因此稱為K-Nearest Neighbors)，然後對這K個資料統計每個類別的數量，以多數決的方式決定要預測的資料類別。
+
+KNN雖然概念簡單，但還有不錯的結果。因此，常常用來作為其他分類演算法的比較基準。
+
+FNN套件提供KNN分類演算法。安裝後，載入套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(FNN)
 ```
+
+以**交互驗證(cross validation, cv)**的方式，找出K為x時，KNN的準確度。cv是將資料分成多個部分，每一次取出一個部分當做測試資料，以其他部分作為訓練資料，建立預測模型，預測測試資料的結果，估算這個模型的準確度。然後，再取出未曾測試的另一部份資料做為測試資料，以其他部分做為訓練資料，估算準確度。反覆多次，最後將所有獲得的準確度進行平均，做為準確度的估計值。
 
 ```{r}
 test_k <- function (x) {
@@ -451,10 +507,12 @@ test_k <- function (x) {
 }
 ```
 
+從K=1到20分別測試，找出最大準確度的K值。
 ```{r}
 accu <- sapply(1:20, test_k)
 ```
 
+計算測試資料的準確度
 ```{r}
 knn_res <- knn(subset(train_set, select=-vote_average_p),
                subset(test_set, select=-vote_average_p),
@@ -462,40 +520,12 @@ knn_res <- knn(subset(train_set, select=-vote_average_p),
 confusionMatrix(knn_res, test_set$vote_average_p)$overall[1]
 ```
 
-## 分類樹監督式學習
+## 進行決策樹分類
 
-### 利用caret套件的rpart方法進行分類樹監督式機器學習
+機器學習中，決策樹是一種樹型結構的分類方法，在樹型結構的第一層分支上對全體的資料依照某一個條件進行分類，分類後盡量使同一群內的資料具有相同的輸出資訊，也就是提高輸出資訊的純度。然後在接下來的第二層分支，再分別對這兩群資料進行分類，使得分類後的結果純度再提高。反覆進行上述的分類過程，當不能再進行分類或一個單獨的類可以被應用於某一分支時，決策樹的建置就完成了。
 
-`caret`套件提供一套試驗模式，透過這種模式可以選擇各種分類器。首先我們建立一個是用於各種方法的設定，調整每種分類器的參數，使得分類器可以有較好的結果。
-```{r}
-tr_control <- trainControl(method = "repeatedcv",
-                           number = 10,
-                           repeats = 10,
-                           search = 'random')
-```
-
-使用`rpart`方法，訓練分類樹
-```{r}
-mod_rpart <- train(vote_average_p ~ .,
-                   method = "rpart",
-                   data = train_set,
-                   tuneLength = 10, 
-                   metric = "Accuracy",
-                   trControl = tr_control)
-```
-
-以訓練好的分類模型進行測試資料(test_set)分類的成效，Confusion Matrix表示各類別的資料被分到其他類別的情形，Accuracy是分類的準確性。
-```{r}
-test_res <- predict(mod_rpart, test_set)
-
-confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
-```
-
-### 利用rpart套件進行分類樹監督式學習
-
-除了利用`caret`套件訓練分類器以外，還可以使用各分類器原生的套件，例如rpart分類器的原生套件便是`rpart`。
-
-載入分類樹套件
+![](image/classification_tree.png)
+套件`rpaprt`提供決策樹應用。安裝`rpaprt`套件後，載入這個套件。
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(rpart)
 ```
@@ -512,7 +542,7 @@ rpart_model <- rpart(vote_average_p ~ .,
 printcp(rpart_model)
 ```
 
-分類樹如果太大，會有過度擬合(overfitting)的問題，也就是太像訓練資料，對沒有參與訓練的資料，表現可能不理想。所以分類樹通常會經過裁減(pruning)，選擇預測能力較好的部分，也就是上面xerror最小的cp值。
+訓練完成之後，決策樹如果太大，會有過度擬合(overfitting)的問題，也就是太像訓練資料。對於沒有參與訓練的資料，表現可能不理想。所以分類樹通常會經過裁減(pruning)，選擇預測能力較好的部分，也就是上面xerror最小的cp值。
 
 xerror最小值
 ```{r}
@@ -543,24 +573,6 @@ confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
 ```
 
 ## 進行隨機森林監督式學習
-
-### 利用caret套件的rf方法進行隨機森林監督式學習
-
-```{r}
-mod_rf <- train(vote_average_p ~ .,
-                method = "rf",
-                data = train_set,
-                tuneLength = 10, 
-                metric = "Accuracy",
-                trControl = tr_control)
-```
-
-以訓練好的分類模型進行測試資料(test_set)分類的成效
-```{r}
-test_res <- predict(mod_rf, test_set)
-
-confusionMatrix(test_res, test_set$vote_average_p)
-```
 
 ### 利用隨機森林套件randomForest進行監督式機器學習
 
