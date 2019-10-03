@@ -111,28 +111,28 @@ movies %>%
 
 ---
 
-`budget`最小為1 ，看起來仍然不合理。顯示`budget`少於1000的電影共幾筆？
+`budget`最小為1 ，看起來仍然不合理。顯示`budget`少於10000的電影共幾筆？
 ```{r}
-print(paste("budget少於1000的電影數量：", nrow(movies[movies$budget<1000,])))
+print(paste("budget少於10000的電影數量：", nrow(movies[movies$budget<10000,])))
 ```
 
-刪除`budget`少於1000的電影
+刪除`budget`少於10000的電影
 ```{r}
 movies <- movies %>%
-  filter(budget>=1000)
+  filter(budget>=10000)
 ```
 
 ---
 
-收入太少，也不正常，顯示`revenue`少於1000的電影共幾筆？
+收入太少，也不正常，顯示`revenue`少於10000的電影共幾筆？
 ```{r}
-print(paste("revenue少於1000的電影數量：", nrow(movies[movies$revenue<1000,])))
+print(paste("revenue少於10000的電影數量：", nrow(movies[movies$revenue<10000,])))
 ```
 
-再刪除`revenue`少於1000的電影
+再刪除`revenue`少於10000的電影
 ```{r}
 movies <- movies %>%
-  filter(revenue>=1000)
+  filter(revenue>=10000)
 ```
 
 ---
@@ -538,7 +538,10 @@ NB_model <- naive_bayes(vote_average_p ~ .,
 ```
 
 ```{r}
-NB_res <- predict(NB_model, newdata=test_set, type="class")
+test_set1 <- test_set %>%
+  select(-vote_average_p)
+
+NB_res <- predict(NB_model, newdata=test_set1, type="class")
 
 
 confusionMatrix(NB_res, test_set$vote_average_p)$overall[1]
