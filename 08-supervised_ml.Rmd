@@ -10,7 +10,7 @@
 
 ## 監督式機器學習
 
-監督式機器學習 (supervised machine learning)是利用一組已經標注結果的資料，預測尚未標注結果的新資料的可能結果。以數學的方式來表示這個概念，監督式機器學習利用一組資料 $X_{1}, X_{2}, ..., X_{N}$ 以及其對應的結果 $Y_{1}, Y_{2}, ..., Y_{N}$ ，設法找到一個模型 $f(x)$ ，盡可能使 $f(X_{1}) = Y_{1}$ 、 $f(X_{2}) = Y_{2}$ 、...、 $f(X_{N}) = Y_{N}$ 。當有新的資料 $\hat{X}$ 進入時，可以利用 $f(x)$ 計算的結果 $f(\hat{X})$ ，做為可能結果的預測。
+監督式機器學習 (supervised machine learning)是利用一組已經標注結果的資料，預測尚未標注結果的新資料的可能結果。以數學的方式來表示這個概念，監督式機器學習利用一組資料 $X_{1}, X_{2}, ..., X_{N}$ ($X_{i}$稱為預測變數或解釋變數)以及其對應的結果 $Y_{1}, Y_{2}, ..., Y_{N}$ ($Y_{i}$稱為目標變數)，設法找到一個模型 $f(x)$ ，盡可能使 $f(X_{1}) = Y_{1}$ 、 $f(X_{2}) = Y_{2}$ 、...、 $f(X_{N}) = Y_{N}$ 。當有新的資料 $\hat{X}$ 進入時，可以利用 $f(x)$ 計算的結果 $f(\hat{X})$ ，做為可能結果的預測。
 
 ---
 
@@ -454,6 +454,8 @@ movies <- movies %>%
   select(-id)
 ```
 
+除了`vote_average_p`為目標變數外，其餘的變數都為預測變數。
+
 ### 轉換資料為有效描述和預測的特徵
 
 載入套件
@@ -549,7 +551,7 @@ confusionMatrix(NB_res, test_set$vote_average_p)$overall[1]
 
 ## 進行支持向量機分類
 
-支持向量機(Support Vector Machine, SVM)試圖從訓練資料中找到一個超平面(hyperplane)，將訓練資料區分成兩個具有最大差異的類別。以下圖為例，可以發現右圖上的超平面具有最好的分類結果，因為該超平面距離兩個類別上所有的資料是最大的情形。用來找到這個超平面的資料便稱為支持向量(Support Vectors)，例如在右圖上以實心表現的資料點。當新資料需要進行分類時，便根據超平面判斷新資料的類別。
+支持向量機(Support Vector Machine, SVM)試圖從訓練資料中找到一個超平面(hyperplane)，將訓練資料區分成兩個具有最大差異的類別。以下圖為例，可以發現右圖上的超平面具有最好的分類結果，因為該超平面距離兩個類別上所有的資料是最大的情形。用來找到這個超平面的資料點上垂直於超平面的向量便稱為支持向量(Support Vectors)，例如在右圖上以實心表現的資料點。當新資料需要進行分類時，便根據超平面判斷新資料的類別。
 
 ![](image/svm.png)
 
@@ -624,6 +626,17 @@ pruned.tree <- prune(rpart_model,
 test_res <- predict(pruned.tree, test_set, type = "class")
 
 confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
+```
+
+為了觀察決策樹上所使用的分類嫖件，請安裝rpart.plot套件，並載入該套件
+```{r}
+library(rpart.plot)
+```
+
+```{r}
+png("rpart_tree.png", width=2048, height=1536)
+rpart.plot(pruned.tree, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+dev.off()
 ```
 
 ## 進行隨機森林監督式學習
