@@ -628,11 +628,12 @@ test_res <- predict(pruned.tree, test_set, type = "class")
 confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
 ```
 
-為了觀察決策樹上所使用的分類嫖件，請安裝rpart.plot套件，並載入該套件
+為了觀察決策樹上所使用的分類條件，以下將畫出決策樹各層的條件。請安裝rpart.plot套件，並載入該套件
 ```{r}
 library(rpart.plot)
 ```
 
+因為產生的決策樹相當龐大，所以將畫出的決策樹輸出為尺寸相當大的png檔，便於觀察。
 ```{r}
 png("rpart_tree.png", width=2048, height=1536)
 rpart.plot(pruned.tree, box.palette="RdBu", shadow.col="gray", nn=TRUE)
