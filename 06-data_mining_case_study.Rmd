@@ -63,11 +63,14 @@
 
 2. Emery, S. L., Szczypka, G., Abril, E. P., Kim, Y., & Vera, L. (2014). Are you scared yet? Evaluating fear appeal messages in tweets about the tips campaign. Journal of Communication, 64(2), 278-295.
 
+在Tips from former smokers 廣告在美國播出期間，本研究從Twitter訊息語料庫收集和評估吸菸行為、香菸管制政策和廣告有關等三方面相關的推文(tweets)。先以人工標記1345則推文的類別後，再利用這些和其分類的結果訓練naive Bayes分類器(NB classifier)，預測其餘推文的類別。分類的類別是根據 Extended Parallel Process Model (EPPM)的理論，共包括接受訊息、拒絕訊息和不予理會，前兩者表示高感知威脅的評估，不予理會則表示低感知威脅的評估。接受訊息定義為這則推文表達了推文者在觀看廣告後感到恐懼或吸菸對健康的威脅，拒絕訊息則是推文者表達對廣告威脅訊息的懷疑、迴避或抗拒。
+
 3. Rana, M. I., Khalid, S., & Akbar, M. U. (2014). News classification based on their headlines: A review. In 17th IEEE International Multi Topic Conference 2014 (pp. 211-216). IEEE.
 
 4. Ott, M., Choi, Y., Cardie, C., & Hancock, J. T. (2011, June). Finding deceptive opinion spam by any stretch of the imagination. In Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies-Volume 1 (pp. 309-319). Association for Computational Linguistics.
 
 5. De Choudhury, M., Gamon, M., Counts, S., & Horvitz, E. (2013). Predicting depression via social media. in Proceedings  of International AAAI Conference on Weblogs and Social Media, 13, 1-10.
+
 ### 非監督式機器學習
 1. Evans, M. S. (2014). A computational approach to qualitative analysis in large textual datasets. PloS one, 9(2), e87908.
 
