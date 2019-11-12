@@ -70,6 +70,8 @@ summary(movies)
 ```
 
 
+## 資料處理與特徵抽取
+
 ### 資料的清除與整理
 
 整理各個variable，分為以下四類
@@ -280,7 +282,8 @@ movies %>%
   labs(x="出品年代", y="電影數量比率") +
   theme(panel.background = element_blank(),
         axis.line=element_line(color="grey"),
-        panel.grid.major.y = element_line(color="grey90"))
+        panel.grid.major.y = element_line(color="grey90"),
+        axis.text.x = element_text(angle=30, hjust=1))
 ```
 
 將release_year改為one-hot encoding的形式
@@ -296,6 +299,11 @@ movies_year <- movies %>%
 movies <- movies %>%
   left_join(movies_year) %>%
   select(-release_date, -release_year)
+```
+
+移除`movies_year`
+```{r}
+remove(movies_year)
 ```
 
 ---
@@ -386,6 +394,11 @@ movies <- movies %>%
   select(-genres, -genres_data)
 ```
 
+移除`movies_genres`
+```{r}
+remove(movies_genres)
+```
+
 ---
 
 分析`production_companies`
@@ -449,6 +462,13 @@ movies %>%
 
 ```
 
+移除`movies_pc`、`production_companies`和`top100pc`
+```{r}
+remove(movies_pc)
+remove(production_companies)
+remove(top100pc)
+```
+
 ---
 
 在進行資料探勘前，最後再檢視一次movies
@@ -475,6 +495,7 @@ library(caret)
 
 將TMDB電影資料分為訓練集與測試集，訓練資料用來訓練各種分類器，測試資料比較各種分類器的成效。
 ```{r}
+# Generate random seed
 sd <- round(second(Sys.time())*100)
 
 set.seed(sd)
@@ -491,18 +512,36 @@ test_set <- movies[-trainRowNumbers,]
 
 調整每個variable的值，前四個variables(budget, popularity, revenue, run_time)根據平均數和標準差進行調整，最後一個variable(top_pc_number)調整為0與1之間
 ```{r}
+# 以訓練資料集，產生調整參數 (平均數和標準差)
 preprocessParams_1 <- preProcess(train_set[,1:4], method=c("center", "scale"))
+# 調整訓練資料集
 train_set[,1:4] <- predict(preprocessParams_1, train_set[,1:4])
+# 調整測試資料集
 test_set[,1:4] <- predict(preprocessParams_1, test_set[,1:4])
 
+# 以訓練資料集，產生調整參數 (range:全距，調整為0~1之間的數值)
 preprocessParams_2 <- preProcess(train_set[,ncol(train_set)], method=c("range"))
+# 調整訓練資料集
 train_set[,ncol(train_set)] <- predict(preprocessParams_2, train_set[,ncol(train_set)])
+# 調整測試資料集
 test_set[,ncol(train_set)] <- predict(preprocessParams_2, test_set[,ncol(train_set)])
+```
+
+移除調整參數
+```{r}
+remove(preprocessParams_1)
+remove(preprocessParams_2)
+```
+
+### 建立一個data frame用來比較各種分類演算法
+```{r}
+classifier_comp <- data.frame(method=character(0),
+                              result=double(0))
 ```
 
 ## 進行K-Nearest Neightbors分類
 
-K-Nearest Neightbors分類演算法(以下簡稱KNN)，是最直覺的分類演算法。有別於其他監督式機器學習的分類演算法，KNN不需要先利用已經知道類別的資料訓練預測模型，其主要的概念是將要預測的資料與已經知道類別的資料進行比對，找出最相似的K個資料(因此稱為K-Nearest Neighbors)，然後對這K個資料統計每個類別的數量，以多數決的方式決定要預測的資料類別。
+K-Nearest Neightbors分類演算法(以下簡稱KNN)，是最直覺的分類演算法。有別於其他監督式機器學習的分類演算法，KNN不需要先利用已經知道類別的資料訓練預測模型，其主要的概念是將要預測的資料與已經知道類別的資料進行比對，找出最相似的K個候選資料(因此稱為K-Nearest Neighbors)，然後對這K個資料統計每個類別的數量，以多數決的方式決定要預測的資料類別。
 
 KNN雖然概念簡單，但還有不錯的結果。因此，常常用來作為其他分類演算法的比較基準。
 
@@ -511,7 +550,7 @@ FNN套件提供KNN分類演算法。安裝後，載入套件
 library(FNN)
 ```
 
-以**交互驗證(cross validation, cv)**的方式，找出K為x時，KNN的準確度。cv是將資料分成多個部分，每一次取出一個部分當做測試資料，以其他部分作為訓練資料，建立預測模型，預測測試資料的結果，估算這個模型的準確度。然後，再取出未曾測試的另一部份資料做為測試資料，以其他部分做為訓練資料，估算準確度。反覆多次，最後將所有獲得的準確度進行平均，做為準確度的估計值。
+首先找出在訓練資料集中最佳的K值，也就是以多少個候選資料來預測會有較大的準確度。此處以**交互驗證(cross validation, cv)**的方式，找出K為x時，KNN的準確度，然後選取準確度最大的x，做為K。cv是將資料分成多個部分，每一次取出一個部分當做測試資料，以其他部分作為訓練資料，建立預測模型，預測測試資料的結果，估算這個模型的準確度。然後，再取出未曾測試的另一部份資料做為測試資料，以其他部分做為訓練資料，估算準確度。反覆多次，最後將所有獲得的準確度進行平均，做為準確度的估計值。
 
 ```{r}
 test_k <- function (x) {
@@ -527,34 +566,45 @@ test_k <- function (x) {
 accu <- sapply(1:20, test_k)
 ```
 
-計算測試資料的準確度
+計算測試資料集的準確度
 ```{r}
 knn_res <- knn(subset(train_set, select=-vote_average_p),
                subset(test_set, select=-vote_average_p),
                cl=train_set$vote_average_p, k=which.max(accu))
-confusionMatrix(knn_res, test_set$vote_average_p)$overall[1]
+acc <- confusionMatrix(knn_res, test_set$vote_average_p)$overall[1]
+
+classifier_comp <- classifier_comp %>%
+  add_row(method="KNN", result=acc)
 ```
 
 
 ## 進行Naive Bayes演算法分類
 
+Naive Bayes分類演算法(簡稱NB)是利用Bayes Theorem(貝氏定理)，根據資料特徵計算該資料屬於各類別的機率，以機率最大者做為預測之結果。在這個方法中，首先以訓練資料集建立預測模型(也就是各特徵對於分類的重要性)，然後針對測試資料集的每一筆資料，根據其特徵進行預測。這個方法相當依賴資料特徵的好壞。
+
+安裝NB分類法的套件`naivebayes`之後，載入該套件
 ```{r}
 library(naivebayes)
 ```
 
+以訓練資料集訓練預測模型
 ```{r}
 NB_model <- naive_bayes(vote_average_p ~ ., 
                                usekernel=TRUE, data=train_set)
 ```
 
+進行測試
 ```{r}
+#先移除測試資料中的類別
 test_set1 <- test_set %>%
   select(-vote_average_p)
 
 NB_res <- predict(NB_model, newdata=test_set1, type="class")
 
+acc <- confusionMatrix(NB_res, test_set$vote_average_p)$overall[1]
 
-confusionMatrix(NB_res, test_set$vote_average_p)$overall[1]
+classifier_comp <- classifier_comp %>%
+  add_row(method="NB", result=acc)
 ```
 
 ## 進行支持向量機分類
@@ -580,12 +630,17 @@ SVM_model <- svm(vote_average_p ~ .,
 ```{r}
 SVM_res <- predict(SVM_model, newdata=test_set, type="class")
 
-confusionMatrix(SVM_res, test_set$vote_average_p)$overall[1]
+acc <- confusionMatrix(SVM_res, test_set$vote_average_p)$overall[1]
+
+classifier_comp <- classifier_comp %>%
+  add_row(method="SVM", result=acc)
 ```
 
 ## 進行決策樹分類
 
 機器學習中，決策樹是一種樹型結構的分類方法，在樹型結構的第一層分支上對全體的資料依照某一個條件進行分類，分類後盡量使同一群內的資料具有相同的輸出資訊，也就是提高輸出資訊的純度。然後在接下來的第二層分支，再分別對這兩群資料進行分類，使得分類後的結果純度再提高。反覆進行上述的分類過程，當不能再進行分類或一個單獨的類可以被應用於某一分支時，決策樹的建置就完成了。
+
+預測時便從決策樹的最上層，根據節點上的條件判斷其所屬分支，然後由上而下針對每一個條件進行判斷，選擇分支，一直到最下層的節點為止，此時便以該節點上數量最多的類別做為該資料的預設結果。
 
 ![](image/classification_tree.png)
 
@@ -606,7 +661,7 @@ rpart_model <- rpart(vote_average_p ~ .,
 printcp(rpart_model)
 ```
 
-訓練完成之後，決策樹如果太大，會有過度擬合(overfitting)的問題，也就是太像訓練資料。對於沒有參與訓練的資料，表現可能不理想。所以分類樹通常會經過裁減(pruning)，選擇預測能力較好的部分，也就是上面xerror最小的cp值。
+訓練完成之後，決策樹如果太大，會有過度擬合(overfitting)的問題，也就是太像訓練資料。對於沒有參與訓練的資料，表現可能不理想。所以分類樹通常會經過裁減(pruning)，選擇預測能力較好的部分，也就是上面xerror最小的CP值。
 
 xerror最小值
 ```{r}
@@ -618,7 +673,7 @@ xerror最小的層級
 which.min(rpart_model$cptable[, "xerror"])
 ```
 
-xerror最小的cp值
+xerror最小的CP值
 ```{r}
 rpart_model$cptable[which.min(rpart_model$cptable[, "xerror"]), "CP"]
 ```
@@ -633,7 +688,10 @@ pruned.tree <- prune(rpart_model,
 ```{r}
 test_res <- predict(pruned.tree, test_set, type = "class")
 
-confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
+acc <- confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
+
+classifier_comp <- classifier_comp %>%
+  add_row(method="Decision Tree", result=acc)
 ```
 
 為了觀察決策樹上所使用的分類條件，以下將畫出決策樹各層的條件。請安裝rpart.plot套件，並載入該套件
@@ -649,6 +707,8 @@ dev.off()
 ```
 
 ## 進行隨機森林監督式學習
+
+隨機森林(random forest)是一個集成式學習(ensemble learning)的分類方法，也就是是將多個分類結果整合起來的方法。隨機森林的得名來自於它是由多個決策樹的分類結果整合起來的方法，並且每一個決策樹的訓練資料集是從原本的訓練資料集**隨機**選取若干observations和variables進行訓練。
 
 載入隨機森林套件
 ```{r results='hide', message=FALSE, warning=FALSE}
