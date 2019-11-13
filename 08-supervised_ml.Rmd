@@ -737,19 +737,22 @@ remove(rpart_model)
 remove(test_res)
 remove(pruned.tree)
 ```
+
 ## 進行隨機森林監督式學習
 
-隨機森林(random forest)是一個集成式學習(ensemble learning)的分類方法，也就是是將多個分類結果整合起來的方法。隨機森林的得名來自於它是由多個決策樹的分類結果整合起來的方法，並且每一個決策樹的訓練資料集是從原本的訓練資料集**隨機**選取若干observations和variables進行訓練。
+隨機森林(random forest)是一個集成式學習(ensemble learning)的分類方法，也就是是將多個分類結果整合起來的方法。隨機森林的得名來自於它是由多個決策樹的分類結果整合起來的方法，並且每一個決策樹的訓練資料集是從原本的訓練資料集**隨機**選取若干observations和variables進行訓練。進行預測時，將輸入的資料分別輸入所有的決策樹，產生每一個決策樹的預測結果，然後以多數決的方式，選取最有可能的類別。
 
 載入隨機森林套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(randomForest)
 ```
 
+利用訓練資料進行分類模型訓練
 ```{r}
 rf_model <- randomForest(vote_average_p ~ ., data = train_set)
 ```
 
+查看每個variable在運用隨機森林進行分類的重要性
 ```{r}
 importance <- importance(rf_model)
 data.frame(variable=dimnames(importance)[[1]],
@@ -762,10 +765,21 @@ data.frame(variable=dimnames(importance)[[1]],
   coord_flip()
 ```
 
+預測測試資料的類別，計算其準確度
 ```{r}
 rf_res <- predict(rf_model, test_set)
 
-confusionMatrix(rf_res, test_set$vote_average_p)$overall[1]
+acc <- confusionMatrix(rf_res, test_set$vote_average_p)$overall[1]
+
+classifier_comp <- classifier_comp %>%
+  add_row(method="RF", result=acc)
+```
+
+移決策樹計算時的暫存變數
+```{r}
+remove(rf_model)
+remove(rf_res)
+remove(importance)
 ```
 
 ## 隨機梯度增強
