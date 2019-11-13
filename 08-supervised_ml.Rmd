@@ -28,8 +28,9 @@
 
 - K-Nearest Neighbors演算法
 - Naive Bayes 分類演算法
-- 決策樹(devision tree)
-- 
+- 支援向量機 (support vector machine)
+- 決策樹 (decision tree)
+- 隨機森林 (random forest)
 
 這些分類演算法各有各的優點，有的容易實作，有的效率高，有的產生的結果容易解釋，有的則是整合其他分類演算法的結果。在應用上，可以依據分類問題的特性進行選擇。
 
@@ -533,6 +534,12 @@ remove(preprocessParams_1)
 remove(preprocessParams_2)
 ```
 
+移除random seed和訓練集編號
+```{r}
+remove(sd)
+remove(trainRowNumbers)
+```
+
 ### 建立一個data frame用來比較各種分類演算法
 ```{r}
 classifier_comp <- data.frame(method=character(0),
@@ -577,6 +584,11 @@ classifier_comp <- classifier_comp %>%
   add_row(method="KNN", result=acc)
 ```
 
+移除KNN計算時的暫存變數
+```{r}
+remove(accu)
+remove(knn_res)
+```
 
 ## 進行Naive Bayes演算法分類
 
@@ -607,6 +619,13 @@ classifier_comp <- classifier_comp %>%
   add_row(method="NB", result=acc)
 ```
 
+移除NB計算時的暫存變數
+```{r}
+remove(NB_model)
+remove(test_set1)
+remove(NB_res)
+```
+
 ## 進行支持向量機分類
 
 支持向量機(Support Vector Machine, SVM)試圖從訓練資料中找到一個超平面(hyperplane)，將訓練資料區分成兩個具有最大差異的類別。以下圖為例，可以發現右圖上的超平面具有最好的分類結果，因為該超平面距離兩個類別上所有的資料是最大的情形。用來找到這個超平面的資料點上垂直於超平面的向量便稱為支持向量(Support Vectors)，例如在右圖上以實心表現的資料點。當新資料需要進行分類時，便根據超平面判斷新資料的類別。
@@ -634,6 +653,12 @@ acc <- confusionMatrix(SVM_res, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
   add_row(method="SVM", result=acc)
+```
+
+移SVM計算時的暫存變數
+```{r}
+remove(SVM_model)
+remove(SVM_res)
 ```
 
 ## 進行決策樹分類
@@ -706,6 +731,12 @@ rpart.plot(pruned.tree, box.palette="RdBu", shadow.col="gray", nn=TRUE)
 dev.off()
 ```
 
+移決策樹計算時的暫存變數
+```{r}
+remove(rpart_model)
+remove(test_res)
+remove(pruned.tree)
+```
 ## 進行隨機森林監督式學習
 
 隨機森林(random forest)是一個集成式學習(ensemble learning)的分類方法，也就是是將多個分類結果整合起來的方法。隨機森林的得名來自於它是由多個決策樹的分類結果整合起來的方法，並且每一個決策樹的訓練資料集是從原本的訓練資料集**隨機**選取若干observations和variables進行訓練。
