@@ -738,7 +738,7 @@ remove(test_res)
 remove(pruned.tree)
 ```
 
-## 進行隨機森林監督式學習
+## 進行隨機森林分類
 
 隨機森林(random forest)是一個集成式學習(ensemble learning)的分類方法，也就是是將多個分類結果整合起來的方法。隨機森林的得名來自於它是由多個決策樹的分類結果整合起來的方法，並且每一個決策樹的訓練資料集是從原本的訓練資料集**隨機**選取若干observations和variables進行訓練。進行預測時，將輸入的資料分別輸入所有的決策樹，產生每一個決策樹的預測結果，然後以多數決的方式，選取最有可能的類別。
 
@@ -782,28 +782,37 @@ remove(rf_res)
 remove(importance)
 ```
 
-## 隨機梯度增強
+## 進行梯度提升機分類
 
+梯度提升機(Gradient Boosting Machine)是另一種集成式的機器學習技術，透過多個弱預測模型(例如決策樹)的集成來產生。其概念為在訓練新的預測模型時，可從先前模型錯誤分類的資料來增強，也就是給予錯誤分類的資料更大的權重，以訓練新的預測模型。然後將所有的分類模型以它們的預測精準度加權，構建集成模型。理論上，可以應用各種分類演算法做為梯度提升機的基礎分類法，一般使用決策樹做為基礎模型，此時稱為梯度提升樹（GBT或GBDT）。
+
+載入梯度提升樹套件
 ```{r results='hide', message=FALSE, warning=FALSE}
 library(gbm)
 ```
 
+利用訓練資料進行分類模型訓練
 ```{r}
 gbm_model <- gbm(vote_average_p ~ ., data = train_set,
                  distribution="multinomial", n.trees = 1000,
                  cv.folds = 10)
 ```
 
+最佳的決策樹數量
 ```{r}
 best_iter <- gbm.perf(gbm_model, method="cv")
 ```
 
+預測測試資料的類別，計算其準確度
 ```{r}
 gbm_res <- predict(gbm_model, test_set, n.trees=best_iter)
 
 gbm_res_labels <- as.factor(colnames(gbm_res)[apply(gbm_res, 1, which.max)])
 
-confusionMatrix(gbm_res_labels, test_set$vote_average_p)$overall[1]
+acc <- confusionMatrix(gbm_res_labels, test_set$vote_average_p)$overall[1]
+
+classifier_comp <- classifier_comp %>%
+  add_row(method="GBM", result=acc)
 ```
 
 ## 類神經網路
