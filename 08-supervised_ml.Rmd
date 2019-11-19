@@ -31,6 +31,7 @@
 - 支援向量機 (support vector machine)
 - 決策樹 (decision tree)
 - 隨機森林 (random forest)
+- 梯度提升機 (gradient boosting machine)
 
 這些分類演算法各有各的優點，有的容易實作，有的效率高，有的產生的結果容易解釋，有的則是整合其他分類演算法的結果。在應用上，可以依據分類問題的特性進行選擇。
 
@@ -581,7 +582,7 @@ knn_res <- knn(subset(train_set, select=-vote_average_p),
 acc <- confusionMatrix(knn_res, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
-  add_row(method="KNN", result=acc)
+  add_row(method="KNN", result=round(acc*100, 2))
 ```
 
 移除KNN計算時的暫存變數
@@ -599,29 +600,57 @@ Naive Bayes分類演算法(簡稱NB)是利用Bayes Theorem(貝氏定理)，根�
 library(naivebayes)
 ```
 
+因為資料特徵中有許多重覆的或是不重要的資訊，因此利用利用caret套件的pca (principal component analysis)，先將原先的資料特徵轉換成為比較小維度的特徵
+```{r}
+preprocessParams <- train_set %>%
+  select(-vote_average_p) %>%
+  as.matrix() %>%
+  preProcess(method = "pca", thresh = 0.8)
+```
+
+調整訓練資料集的資料特徵
+```{r}
+# 調整訓練資料集
+train_fea <- train_set %>%
+  select(-vote_average_p) %>%
+  as.matrix()
+
+train_set1 <- predict(preprocessParams, train_fea) %>%
+  as.data.frame() %>%
+  mutate(vote_average_p=train_set$vote_average_p)
+```
+
 以訓練資料集訓練預測模型
 ```{r}
 NB_model <- naive_bayes(vote_average_p ~ ., 
-                               usekernel=TRUE, data=train_set)
+                               usekernel=TRUE, data=train_set1)
 ```
 
 進行測試
 ```{r}
-#先移除測試資料中的類別
-test_set1 <- test_set %>%
-  select(-vote_average_p)
+# 調整測試資料集
+test_fea <- test_set %>%
+  select(-vote_average_p) %>%
+  as.matrix()
+
+test_set1 <- predict(preprocessParams, test_fea) %>%
+  as.data.frame()
 
 NB_res <- predict(NB_model, newdata=test_set1, type="class")
 
 acc <- confusionMatrix(NB_res, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
-  add_row(method="NB", result=acc)
+  add_row(method="NB", result=round(acc*100, 2))
 ```
 
 移除NB計算時的暫存變數
 ```{r}
+remove(preprocessParams)
+remove(train_fea)
+remove(train_set1)
 remove(NB_model)
+remove(test_fea)
 remove(test_set1)
 remove(NB_res)
 ```
@@ -652,7 +681,7 @@ SVM_res <- predict(SVM_model, newdata=test_set, type="class")
 acc <- confusionMatrix(SVM_res, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
-  add_row(method="SVM", result=acc)
+  add_row(method="SVM", result=round(acc*100, 2))
 ```
 
 移SVM計算時的暫存變數
@@ -716,7 +745,7 @@ test_res <- predict(pruned.tree, test_set, type = "class")
 acc <- confusionMatrix(test_res, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
-  add_row(method="Decision Tree", result=acc)
+  add_row(method="Decision Tree", result=round(acc*100, 2))
 ```
 
 為了觀察決策樹上所使用的分類條件，以下將畫出決策樹各層的條件。請安裝rpart.plot套件，並載入該套件
@@ -772,10 +801,10 @@ rf_res <- predict(rf_model, test_set)
 acc <- confusionMatrix(rf_res, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
-  add_row(method="RF", result=acc)
+  add_row(method="RF", result=round(acc*100, 2))
 ```
 
-移決策樹計算時的暫存變數
+移隨機森林計算時的暫存變數
 ```{r}
 remove(rf_model)
 remove(rf_res)
@@ -812,21 +841,44 @@ gbm_res_labels <- as.factor(colnames(gbm_res)[apply(gbm_res, 1, which.max)])
 acc <- confusionMatrix(gbm_res_labels, test_set$vote_average_p)$overall[1]
 
 classifier_comp <- classifier_comp %>%
-  add_row(method="GBM", result=acc)
+  add_row(method="GBM", result=round(acc*100, 2))
 ```
 
-## 類神經網路
-```{r results='hide', message=FALSE, warning=FALSE}
-library(nnet)
+移隨機森林計算時的暫存變數
+```{r}
+remove(gbm_model)
+remove(gbm_res)
+remove(gbm_res_labels)
+remove(best_iter)
+remove(acc)
 ```
 
-```{r results='hide', message=FALSE, warning=FALSE}
-nnet_model <- nnet(vote_average_p ~ ., data = train_set, linout = TRUE, size = 30, decay = 0.001, maxit = 5000)
-```
+## 比較各分類器的結果
 
 ```{r}
-nnet_res <- predict(nnet_model, test_set, type = 'class')
-
-confusionMatrix(as.factor(nnet_res), test_set$vote_average_p)$overall[1]
+classifier_comp %>%
+  ggplot(aes(x=reorder(method, result), y=result, fill=method)) +
+  geom_col() +
+  scale_fill_brewer(palette="Dark2") +
+  scale_y_continuous(breaks=seq(0, 70, 10)) +
+  labs(x="分類演算法", y="測試準確率 (%)") +
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.line = element_line(colour="grey50"),
+        axis.text.x = element_text(angle=60, hjust=1))
 ```
+
+## 小結 {-}
+
+- 本節探討各種分類演算法。分類演算法是根據已知分類結果的資料特徵訓練一個預測模型，用來預測其它資料的分類結果。
+
+- 為了達到上述目的，研究人員發展出許多集群分析演算法，例如：本次課程中使用的K Nearest Neighbors、Naive Bayes、Support Vector Machine、Decision Tree、Random Forest和Gradient Boosting Machine等分類演算法以及其它分類演算法，如著名的Neural Network(神經網絡)。不同的分類演算法適合應用在不同的問題，同學可以熟悉各種分類演算法，以便應用在不同的問題上。
+
+- 和上次課程的分類演算法類似，影響分類結果的因素，除了採用的演算法之外，還包括資料的特徵。本次課程中以one-hot encoding, z-score normalization, 以及 min-max scaling三種方法將資料的各種特徵對應到[0, 1]之間的數值，以便彼此的誤差不會相差過大。
+
+## 延伸思考 {-}
+
+- 什麼樣性質的問題適合應用集群分析？
+
+- 除了AP外，還有許多集群分析演算法，如何在R語言中找到適合的套件，並且應用這些套件撰寫程式？
 
