@@ -201,7 +201,7 @@ movies %>%
 ```
 
 從上面的圖形可以發現資料分布在2.5到8.5之間
-根據`vote_average`的分布情形，決定將這個variable分為x<=5.5, 5.5<x<=6.5, 6.5<x<=7.5以及7.5<x等四個區間，將`vote_average`改為新的變數`vote_average_p`，做為接下來預測的目標。也就是以其他的variables來預測`vote_average_p`在哪一個區間(類別)。
+根據`vote_average`的分布情形，決定將這個variable分為$x\leq5.5$, $5.5<x\leq6.5$, $6.5<x\leq7.5$以及$7.5<x$等四個區間，將`vote_average`改為新的變數`vote_average_p`，做為接下來預測的目標。也就是以其他的variables來預測`vote_average_p`在哪一個區間(類別)。
 
 ```{r}
 movies <- movies %>%
@@ -596,7 +596,7 @@ remove(knn_res)
 Naive Bayes分類演算法(簡稱NB)是利用Bayes Theorem(貝氏定理)，根據資料特徵計算該資料屬於各類別的機率，以機率最大者做為預測之結果。在這個方法中，首先以訓練資料集建立預測模型(也就是各特徵對於分類的重要性)，然後針對測試資料集的每一筆資料，根據其特徵進行預測。這個方法相當依賴資料特徵的好壞。
 
 安裝NB分類法的套件`naivebayes`之後，載入該套件
-```{r}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(naivebayes)
 ```
 
@@ -664,7 +664,7 @@ remove(NB_res)
 由於SVM原本的應用是針對兩個類別的問題，在將SVM應用到多個類別時，需要採用One-against-One的策略，也就是對每兩個類別分別建立一個SVM模型，所以若是有M個類別的話，便須建立$\frac{M(M-1)}{2}$個SVM模型。當新資料輸入後，便以這立$\frac{M(M-1)}{2}$個SVM模型進行預測，以多數決決定預測的類別。
 
 e1071套件中提供SVM分類演算法。先安裝後，再載入該套件。
-```{r}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(e1071)
 ```
 
@@ -749,7 +749,7 @@ classifier_comp <- classifier_comp %>%
 ```
 
 為了觀察決策樹上所使用的分類條件，以下將畫出決策樹各層的條件。請安裝rpart.plot套件，並載入該套件
-```{r}
+```{r results='hide', message=FALSE, warning=FALSE}
 library(rpart.plot)
 ```
 
@@ -876,9 +876,13 @@ classifier_comp %>%
 
 - 和上次課程的分類演算法類似，影響分類結果的因素，除了採用的演算法之外，還包括資料的特徵。本次課程中以one-hot encoding, z-score normalization, 以及 min-max scaling三種方法將資料的各種特徵對應到[0, 1]之間的數值，以便彼此的誤差不會相差過大。
 
+- 因為訓練資料集與測試資料集為隨機指派，所以每次產生的結果可能會有少部分差異，但大體的趨勢是可以觀察到的。同學可以多試著執行幾次看看會有什麼不同，也可以試著想想，利用k次交叉驗證(k-fold cross validation)獲得較精確的結果。
+
 ## 延伸思考 {-}
 
-- 什麼樣性質的問題適合應用集群分析？
+- 什麼樣性質的問題適合應用分類？
 
-- 除了AP外，還有許多集群分析演算法，如何在R語言中找到適合的套件，並且應用這些套件撰寫程式？
+- 對資料分析來說，選取適當的特徵是很關鍵的步驟，什麼樣的資料類型應選用什麼樣的特徵呢？例如，本次課程中以one-hot encoding, z-score normalization, 以及 min-max scaling三種方法將資料的各種特徵對應到[0, 1]之間的數值，為什麼採用這種特徵？是否有其它更適合的特徵？
+
+- 除了課程中練習的分類演算法和有關套件之外，還有許多的分類演算法和套件，如何在R語言中找到適合的套件，並且應用這些套件撰寫程式？
 
