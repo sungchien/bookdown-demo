@@ -185,46 +185,62 @@ df1 %>%
   filter(staName=="汐科") %>%
   gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
   ggplot() +
-  geom_col(aes(x=trnOpDateW, y=Count, fill=Var), position="dodge") +
+  geom_col(aes(x=trnOpDateW, y=Count, fill=Var)) +
   scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
+  facet_wrap(~Var, nrow=2, labeller = labeller(Var = 
+    c("In" = "進站", "Out" = "出站"))) +
   labs(x="", y="平均進出站人數") +
   theme(panel.background = element_blank(),
-        axis.line = element_line(color="grey"))
+        axis.line = element_line(color="grey"),
+        legend.position="none")
 ```
 
-再檢視臺東站在一週每天的進出人數分布範圍。
+以利用相同方式檢視臺東站和臺北站在一週每天的進出人數分布範圍。(臺北站由同學練習)
+
 ```{r}
 df1 %>%
   filter(staName=="臺東") %>%
   gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
   ggplot() +
-  geom_col(aes(x=trnOpDateW, y=Count, fill=Var), position="dodge") +
+  geom_col(aes(x=trnOpDateW, y=Count, fill=Var)) +
   scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
   scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
+  facet_wrap(~Var, nrow=2, labeller = labeller(Var = 
+    c("In" = "進站", "Out" = "出站"))) +
   labs(x="", y="平均進出站人數") +
   theme(panel.background = element_blank(),
-        axis.line = element_line(color="grey"))
+        axis.line = element_line(color="grey"),
+        legend.position="none")
 ```
 
-最後，檢視臺北站在一週每天的進出人數分布範圍。
+注意週日和週五、週六與平日的情形，汐科站平日進出站人數多於週日和週六；臺北和臺東的週末進出人數都多於週間平日。
+
+針對上述的現象，我們決定以第一組特徵表現平日進出站人數與週六、日的不同。
+
+以圖表示
 ```{r}
 df1 %>%
-  filter(staName=="臺北") %>%
+  filter(staName=="汐科") %>%
   gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
+  group_by(Var) %>%
+  mutate(Count=Count/sum(Count)) %>%
   ggplot() +
-  geom_col(aes(x=trnOpDateW, y=Count, fill=Var), position="dodge") +
-  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
-  scale_y_continuous(limits=c(0, 80000), breaks=seq(0, 80000, 8000)) +
-  labs(x="", y="平均進出站人數") +
+  geom_col(aes(x=trnOpDateW, y=Count, fill=trnOpDateW, group=trnOpDateW)) +
+    geom_text(aes(x=trnOpDateW, label=round(Count, 3)), y=0.04, colour="white") +
+  scale_fill_brewer(palette="Dark2") +
+  scale_y_continuous(limits=c(0, 0.2), breaks=seq(0, 0.2, 0.02)) +
+  facet_wrap(~Var, nrow=2, labeller = labeller(Var = 
+    c("In" = "進站", "Out" = "出站"))) +
+  labs(x="", y="特徵") +
   theme(panel.background = element_blank(),
-        axis.line = element_line(color="grey"))
+        axis.line = element_line(color="grey"),
+        legend.position="none")
 ```
 
-注意週日和週五、週六與平日的情形，汐科站平日進出站人數多於週日和週六，每天的進出站人數大致相同；臺東站的週五和週六出站多於進站，週日則相反；臺北站的週五和週六則是進站多於出站；且臺北和臺東的週末進出人數都多於週間平日。
+同學可自行練習臺北和臺東的情形。
 
-針對上述的現象，我們決定以兩組特徵來表示，第一組特徵表現平日進出站人數與週六、日的不同。
-
+產生所有車站第一組特徵的程式碼如下：
 ```{r}
 sta_inf1 <- df1 %>%
   gather(key=Var, value=Value, -staName, -trnOpDateW) %>%
@@ -237,7 +253,46 @@ sta_inf1 <- df1 %>%
   mutate_if(is.numeric, scale)
 ```
 
-第二組特徵表現每日進出站人數的不同。
+另外，週五、週六和週日的情形，臺東站的週日進站多於出站，週五和週六則相反；臺北站的週五和週六則是進站多於出站。
+
+```{r}
+df1 %>%
+  filter(staName=="臺東") %>%
+  gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
+  ggplot() +
+  geom_col(aes(x=Var, y=Count, fill=Var)) +
+  scale_fill_brewer(palette="Dark2", labels=c("進站", "出站")) +
+  scale_y_continuous(limits=c(0, 15000), breaks=seq(0, 15000, 3000)) +
+  scale_x_discrete(labels = c("In"="進站", "Out"="出站")) +
+  facet_wrap(~trnOpDateW, nrow=2) +
+  labs(x="", y="平均進出站人數") +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey"),
+        legend.position="none")
+```
+
+因此，以第二組特徵表現每日進出站人數的不同。以圖表示
+```{r}
+df1 %>%
+  filter(staName=="臺東") %>%
+  gather(key="Var", value="Count", -staName, -trnOpDateW) %>%
+  group_by(trnOpDateW) %>%
+  mutate(Count=Count/sum(Count)) %>%
+  ggplot() +
+  geom_col(aes(x=Var, y=Count, fill=Var)) +
+  geom_text(aes(x=Var, label=round(Count, 2)), y=0.2, colour="white") +
+  scale_fill_brewer(palette="Dark2") +
+  scale_y_continuous(limits=c(0, 0.6), breaks=seq(0, 0.6, 0.05)) +
+  scale_x_discrete(labels = c("In"="進站", "Out"="出站")) +
+  facet_wrap(~trnOpDateW, nrow=2) +
+  labs(x="", y="特徵") +
+  theme(panel.background = element_blank(),
+        axis.line = element_line(color="grey"))
+```
+
+同學可自行練習臺北的情形。
+
+產生所有車站第二組特徵的程式碼如下
 ```{r}
 sta_inf2 <- df1 %>%
   gather(key=Var, value=Value, -staName, -trnOpDateW) %>%
