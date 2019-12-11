@@ -1,0 +1,111 @@
+# R語言的結構資料輸入方式 {#structured_data_input}
+
+## 課程簡介 {-}
+
+### 課程簡介 {-}
+
+### 學習目標 {-}
+
+```{r}
+library(tidyverse)
+```
+
+## csv檔結構資料輸入方式
+
+```{r}
+# 以CSV檔案格式輸入
+
+file <- "http://opendata.epa.gov.tw/webapi/Data/ATM00679/?$orderby=MonitorDate%20desc&$skip=0&$top=1000&format=csv"
+df_csv <- read_csv(file)
+```
+
+```{r}
+# 將SiteId資料型態改為character
+df_csv <- df_csv %>%
+  mutate(SiteId=as.character(SiteId))
+```
+
+## JSON檔結構資料輸入方式
+
+```{r}
+library(jsonlite)
+```
+
+```{r}
+# 以JSON檔案格式輸入
+file <- "http://opendata.epa.gov.tw/webapi/Data/ATM00679/?$orderby=MonitorDate%20desc&$skip=0&$top=1000&format=json"
+df_json <- fromJSON(file)
+```
+
+```{r}
+str(df_json)
+```
+
+```{r}
+# 將MonitorDate資料型態改為Date
+df_json <- df_json %>%
+  mutate(MonitorDate=as.Date(MonitorDate))
+```
+
+```{r}
+# 將空氣品質指標資料型態改為numeric
+df_json <- df_json %>%
+  mutate_at(4:11, as.numeric)
+```
+
+```{r}
+str(df_json)
+```
+
+## XML檔結構資料輸入方式
+
+```{r}
+library(xml2)
+```
+
+```{r}
+# 以XML檔案格式輸入
+file <- "http://opendata.epa.gov.tw/webapi/Data/ATM00679/?$orderby=MonitorDate%20desc&$skip=0&$top=1000&format=xml"
+xml_data <- read_xml(file)
+```
+
+```{r}
+# 每個資料節點的資料
+getData <- function (x) {
+  # field_data： 各欄位的xml資料 
+  field_data <- xml_children(x)
+  
+  # 欄位值
+  f_value <- xml_text(field_data)
+  # 欄位名稱
+  names(f_value) <- xml_name(field_data)
+  
+  # 傳回一個向量，向量上的值是各欄位的資料
+  return(f_value)
+}
+```
+
+```{r}
+t_data <- sapply(xml_children(xml_data), getData)
+# t_data：矩陣，每一個row是欄位，每一個column是各資料節點的資料
+```
+
+```{r}
+# 資料處理：矩陣轉置並儲存成tibble
+# 如果不熟悉R語言，建議可以先逐行執行，察看結果
+df_xml <- t_data %>%
+  t() %>%                             # 轉置t_data矩陣
+  as_tibble()                         # 轉換成tibble格式
+```
+
+```{r}
+df_xml <- df_xml %>%
+  # 將MonitorDate資料型態改為Date
+  mutate(MonitorDate=as.Date(MonitorDate)) %>% 
+  # 將空氣品質指標資料型態改為numeric
+  mutate_at(4:11, as.numeric)
+```
+
+## Excel檔結構資料輸入方式
+
+## ODF檔結構資料輸入方式
