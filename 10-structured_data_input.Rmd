@@ -108,4 +108,16 @@ df_xml <- df_xml %>%
 
 ## Excel檔結構資料輸入方式
 
-## ODF檔結構資料輸入方式
+```{r}
+library(readxl)
+```
+
+[資料集下載網址](http://ulist.moe.gov.tw/Download/StartDownload?FileName=105ulistdepartmentlist01.xlsx)
+```{r}
+file <- "105ulistdepartmentlist01.xlsx"
+
+df_xlsx <- read_excel(file, skip=1)
+```
+
+
+## ODS檔結構資料輸入方式
